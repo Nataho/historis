@@ -2,7 +2,7 @@ class_name TetrisEngine extends RefCounted
 
 signal board_updated(grid_matrix: Array)
 signal active_piece_moved(piece_cells: Array[Vector2i], piece_type: int)
-signal lines_cleared(line_count: int, combo_count: int)
+signal lines_cleared(line_count: int, combo_count: int, is_tspin:bool)
 
 # Garbage is always sent as an array of "chunks": [{lines:int, hole_column:int}, ...]
 # Each chunk represents one attack event (one non-clearing... one clearing placement),
@@ -35,8 +35,18 @@ const GARBAGE_TSPIN_TABLE: Dictionary = {
 }
 
 var width: int
-var height: int
-var grid: Array = []
+var height: int # visible playfield height only - unchanged contract, e.g. still 20
+var grid: Array = [] # visible rows only - unchanged contract for every existing reader
+
+# Hidden buffer zone above the visible playfield, like TETR.IO/Puyo Puyo
+# Tetris/Tetris Effect. Pieces and garbage can stack up into this freely -
+# nothing here is deleted or ends the game just for existing. Kept as a
+# SEPARATE private array (rather than folding it into `grid`) specifically so
+# `grid`/`height` keep meaning exactly what every existing reader already
+# assumes (get_observation_vector, get_board_state, duplicate_snapshot,
+# board_updated) - none of them need to know the buffer exists.
+const BUFFER_HEIGHT: int = 20
+var _buffer_grid: Array = []
 
 var loaded_shapes: Dictionary = {}
 var piece_indices: Dictionary = {}
@@ -65,6 +75,14 @@ var hold_piece_type: String = ""
 var can_hold: bool = true
 var rotation_state: int = 0
 var last_move_was_rotate: bool = false
+
+# Set once game_over fires (spawn blocked, or a locked row got pushed off the
+# top by rising garbage) and checked at the top of every method that mutates
+# gameplay state. This is the single choke point that makes ALL callers -
+# player input, bots, network-applied moves, lock delay, garbage draining -
+# stop acting on this engine after a topout, without any of them needing to
+# know about it individually. Only start_game() clears it.
+var is_topped_out: bool = false
 
 # --- LOCK DELAY TRACKERS ---
 var lock_timer: float = 0.0
@@ -125,13 +143,29 @@ func _parse_ascii_grid(ascii_grid: Array) -> Array[Vector2i]:
 				
 	return offsets
 
+func _make_empty_row() -> Array:
+	var row: Array = []
+	row.resize(width)
+	row.fill(-1)
+	return row
+
 func _reset_grid() -> void:
 	grid.clear()
 	for y in range(height):
-		var row: Array = []
-		row.resize(width)
-		row.fill(-1)
-		grid.append(row)
+		grid.append(_make_empty_row())
+	_buffer_grid.clear()
+	for y in range(BUFFER_HEIGHT):
+		_buffer_grid.append(_make_empty_row())
+
+# Single choke point for ending the game. Idempotent - if a batch of rising
+# garbage rows tops the board out mid-batch, or spawn and a garbage insertion
+# both fail in close succession, this still only flips the flag and fires the
+# signal once.
+func _trigger_game_over() -> void:
+	if is_topped_out:
+		return
+	is_topped_out = true
+	game_over.emit()
 
 func start_game() -> void:
 	_reset_grid()
@@ -143,6 +177,7 @@ func start_game() -> void:
 	_garbage_drain_timer_ms = 0.0
 	hold_piece_type = ""
 	can_hold = true
+	is_topped_out = false
 	board_updated.emit(grid)
 	
 	_refill_queue()
@@ -172,6 +207,7 @@ func _refill_queue() -> void:
 			queue.append(str(next_piece))
 
 func spawn_piece() -> void:
+	if is_topped_out: return
 	if loaded_shapes.is_empty():
 		push_error("TetrisEngine: No piece definitions loaded! Call load_piece_definitions() first.")
 		return
@@ -196,7 +232,7 @@ func spawn_piece() -> void:
 	queue_changed.emit(queue.slice(0, preview_count))
 	
 	if not _can_fit(active_offsets, active_pos):
-		game_over.emit()
+		_trigger_game_over()
 		return
 		
 	_emit_active_piece()
@@ -207,6 +243,7 @@ func is_grounded() -> bool:
 	return not _can_fit(active_offsets, active_pos + Vector2i.DOWN)
 
 func process_lock_delay(delta_ms: float) -> void:
+	if is_topped_out: return
 	if is_grounded():
 		lock_timer += delta_ms
 		if lock_timer >= LOCK_DELAY_MS:
@@ -227,6 +264,7 @@ func _on_piece_manipulated() -> void:
 			lock_timer = 0.0  # Reset 0.5s timer
 
 func move_piece(direction: Vector2i) -> bool:
+	if is_topped_out: return false
 	var target_pos: Vector2i = active_pos + direction
 	
 	if _can_fit(active_offsets, target_pos):
@@ -244,6 +282,7 @@ func soft_drop() -> void:
 		pass
 
 func hard_drop() -> void:
+	if is_topped_out: return
 	var dropped_steps = 0
 	while move_piece(Vector2i.DOWN):
 		dropped_steps += 1
@@ -256,6 +295,7 @@ func hard_drop() -> void:
 	lock_piece()
 
 func rotate_piece(clockwise: bool, kick_table: Dictionary) -> bool:
+	if is_topped_out: return false
 	if active_piece_type.to_upper() == "O": 
 		return true
 
@@ -288,6 +328,7 @@ func rotate_piece(clockwise: bool, kick_table: Dictionary) -> bool:
 	return false
 
 func rotate_180(kick_table: Dictionary) -> bool:
+	if is_topped_out: return false
 	if active_piece_type.to_upper() == "O": 
 		return true
 
@@ -320,12 +361,32 @@ func rotate_180(kick_table: Dictionary) -> bool:
 
 	return false
 
+# Unified accessors so collision/locking code doesn't care whether a cell is
+# in the visible `grid` (y >= 0) or the hidden `_buffer_grid` (y < 0, with -1
+# being the buffer row immediately above visible row 0).
+func _cell_at(x: int, y: int) -> int:
+	if y >= 0:
+		return grid[y][x]
+	var buf_idx: int = _buffer_grid.size() + y
+	if buf_idx < 0 or buf_idx >= _buffer_grid.size():
+		return GARBAGE_TILE_INDEX # past the top of the whole buffer - treat as solid/blocked
+	return _buffer_grid[buf_idx][x]
+
+func _set_cell_at(x: int, y: int, value: int) -> void:
+	if y >= 0:
+		grid[y][x] = value
+		return
+	var buf_idx: int = _buffer_grid.size() + y
+	if buf_idx < 0 or buf_idx >= _buffer_grid.size():
+		return
+	_buffer_grid[buf_idx][x] = value
+
 func _can_fit(offsets: Array[Vector2i], origin: Vector2i) -> bool:
 	for offset in offsets:
 		var cell = origin + offset
-		if cell.x < 0 or cell.x >= width or cell.y < 0 or cell.y >= height:
+		if cell.x < 0 or cell.x >= width or cell.y < -BUFFER_HEIGHT or cell.y >= height:
 			return false
-		if grid[cell.y][cell.x] != -1:
+		if _cell_at(cell.x, cell.y) != -1:
 			return false
 	return true
 
@@ -343,9 +404,9 @@ func _check_t_spin() -> bool:
 	
 	var occupied_corners: int = 0
 	for corner in corners:
-		if corner.x < 0 or corner.x >= width or corner.y < 0 or corner.y >= height:
+		if corner.x < 0 or corner.x >= width or corner.y < -BUFFER_HEIGHT or corner.y >= height:
 			occupied_corners += 1
-		elif grid[corner.y][corner.x] != -1:
+		elif _cell_at(corner.x, corner.y) != -1:
 			occupied_corners += 1
 
 	return occupied_corners >= 3
@@ -369,18 +430,43 @@ func _check_all_spin() -> bool:
 	return true
 
 func lock_piece() -> void:
+	if is_topped_out: return
 	var is_tspin: bool = _check_t_spin()
 	var is_allspin: bool = false if is_tspin else _check_all_spin()
 
+	var locked_entirely_above_visible: bool = true
 	for offset in active_offsets:
 		var cell = active_pos + offset
-		if cell.y >= 0 and cell.y < height and cell.x >= 0 and cell.x < width:
-			grid[cell.y][cell.x] = active_piece_index
+		if cell.y >= 0:
+			locked_entirely_above_visible = false
+		if cell.x >= 0 and cell.x < width and cell.y >= -BUFFER_HEIGHT and cell.y < height:
+			_set_cell_at(cell.x, cell.y, active_piece_index)
 			
 	board_updated.emit(grid)
+	
+	# Lock Out: the piece locked completely above the visible playfield (every
+	# cell still in the buffer, none touching row 0+). This - not the buffer
+	# simply having content in it - is what actually ends the game up here.
+	if locked_entirely_above_visible:
+		_trigger_game_over()
+		return
+	
 	_check_line_clears(is_tspin, is_allspin)
 	can_hold = true
 	spawn_piece()
+
+# Called when a line clear opens a slot at the top of the visible grid. Pulls
+# the buffer row closest to the visible field down into view (letting a stack
+# that had climbed into the buffer become playable again as you dig out),
+# shifting the rest of the buffer down and backfilling its own top with an
+# empty row. Falls back to a plain empty row if the buffer's already empty.
+func _cascade_row_into_visible_top() -> Array:
+	if _buffer_grid.is_empty():
+		return _make_empty_row()
+	var incoming: Array = _buffer_grid[_buffer_grid.size() - 1]
+	_buffer_grid.remove_at(_buffer_grid.size() - 1)
+	_buffer_grid.insert(0, _make_empty_row())
+	return incoming
 
 func _check_line_clears(is_tspin: bool = false, is_allspin: bool = false) -> void:
 	var cleared_lines: int = 0
@@ -396,10 +482,7 @@ func _check_line_clears(is_tspin: bool = false, is_allspin: bool = false) -> voi
 		if is_full:
 			cleared_lines += 1
 			grid.remove_at(y)
-			var empty_row = []
-			empty_row.resize(width)
-			empty_row.fill(-1)
-			grid.insert(0, empty_row)
+			grid.insert(0, _cascade_row_into_visible_top())
 		else:
 			y -= 1
 
@@ -423,7 +506,7 @@ func _check_line_clears(is_tspin: bool = false, is_allspin: bool = false) -> voi
 			
 	if cleared_lines > 0:
 		combo_count += 1
-		lines_cleared.emit(cleared_lines, combo_count)
+		lines_cleared.emit(cleared_lines, combo_count, is_tspin)
 		board_updated.emit(grid)
 		
 		var base_garbage: int = 0
@@ -489,6 +572,8 @@ func _apply_pending_garbage_instant() -> void:
 		var lines: int = int(chunk.get("lines", 0))
 		var hole_column: int = int(chunk.get("hole_column", 0))
 		for i in range(lines):
+			if is_topped_out:
+				break
 			_insert_garbage_row(hole_column)
 			rows_added += 1
 	
@@ -516,12 +601,13 @@ func _queue_pending_garbage_for_gradual_rise() -> void:
 # _garbage_drain_queue at a steady 1 row per GARBAGE_ROW_INTERVAL_MS, independent
 # of piece locks, so the stack visibly climbs while the player keeps playing.
 func process_garbage(delta_ms: float) -> void:
+	if is_topped_out: return
 	if _garbage_drain_queue.is_empty():
 		_garbage_drain_timer_ms = 0.0
 		return
 	
 	_garbage_drain_timer_ms += delta_ms
-	while _garbage_drain_timer_ms >= GARBAGE_ROW_INTERVAL_MS and not _garbage_drain_queue.is_empty():
+	while _garbage_drain_timer_ms >= GARBAGE_ROW_INTERVAL_MS and not _garbage_drain_queue.is_empty() and not is_topped_out:
 		_garbage_drain_timer_ms -= GARBAGE_ROW_INTERVAL_MS
 		var hole_column: int = _garbage_drain_queue.pop_front()
 		_rise_one_garbage_row(hole_column)
@@ -530,16 +616,13 @@ func process_garbage(delta_ms: float) -> void:
 # piece to worry about here - so it gets pushed up along with the stack to keep
 # its relative position unchanged, instead of the stack rising to meet it.
 func _rise_one_garbage_row(hole_column: int) -> void:
-	_insert_garbage_row(hole_column) # already emits game_over if a locked row got pushed off the top
+	_insert_garbage_row(hole_column) # cascades through the buffer; only triggers game over on true buffer overflow
 	
-	# Try to raise the piece with the stack so its height above the floor stays
-	# unchanged. If that would push any of its cells above row 0 (there's no
-	# hidden buffer zone here), skip the shift for this row instead of forcing
-	# it out of bounds. Forcing it out of bounds used to make _can_fit() reject
-	# EVERY subsequent move/rotate/drop (any out-of-bounds cell always fails
-	# the bounds check), which froze player input on the piece, and then
-	# lock_piece() would silently drop the out-of-bounds cells when the lock
-	# timer expired - the piece would just vanish instead of locking normally.
+	# Raise the piece with the stack so its height above the floor stays
+	# unchanged. _can_fit() now allows negative y (the buffer), so this
+	# naturally lets the piece keep rising past row 0 instead of getting stuck
+	# there - it only stops rising if it would hit the very top of the buffer
+	# or overlap something, same as any other move.
 	var raised_pos: Vector2i = active_pos + Vector2i.UP
 	if _can_fit(active_offsets, raised_pos):
 		active_pos = raised_pos
@@ -603,32 +686,53 @@ func queue_garbage(chunks: Array) -> void:
 	print("[GARBAGE][ENGINE] queued ", chunks, " | pending total now = ", get_pending_garbage_total())
 	garbage_received.emit(get_pending_garbage_total())
 
-# Removes the top row (topping the game out if it held any blocks - they got pushed
-# off the board) and appends one garbage row at the bottom with a single hole.
-func _insert_garbage_row(hole_column: int) -> void:
-	var top_row: Array = grid[0]
-	var top_row_occupied: bool = false
-	for cell in top_row:
+# Shifts one row off the top of the visible grid UP into the buffer (buffer's
+# closest-to-visible row absorbs it), shifts the whole buffer up by one to make
+# room, and inserts new_bottom_row at the bottom of the visible grid. This is
+# the "keep what rises above the field instead of deleting it" behavior -
+# content only ever actually gets lost if it reaches the very top of the
+# buffer AND gets shifted off that too, which is what this returns.
+func _shift_up_and_insert(new_bottom_row: Array) -> bool:
+	var overflow_row: Array = _buffer_grid[0]
+	var overflowed: bool = false
+	for cell in overflow_row:
 		if cell != -1:
-			top_row_occupied = true
+			overflowed = true
 			break
 	
-	grid.remove_at(0)
+	for i in range(_buffer_grid.size() - 1):
+		_buffer_grid[i] = _buffer_grid[i + 1]
+	_buffer_grid[_buffer_grid.size() - 1] = grid[0]
 	
-	var garbage_row: Array = []
-	garbage_row.resize(width)
+	for i in range(grid.size() - 1):
+		grid[i] = grid[i + 1]
+	grid[grid.size() - 1] = new_bottom_row
+	
+	return overflowed
+
+# Appends one garbage row at the bottom with a single hole, cascading
+# everything above it (visible field AND buffer) up by one row. Only truly
+# ends the game if the row that gets pushed off the very top of the buffer
+# was occupied - reaching y=0 (the old "top of the board") is no longer
+# special, matching modern Tetris games (TETR.IO, Puyo Puyo Tetris, Tetris
+# Effect) where stacking above the visible field is fine and only block-out/
+# lock-out actually end the game.
+func _insert_garbage_row(hole_column: int) -> void:
+	var garbage_row: Array = _make_empty_row()
 	garbage_row.fill(GARBAGE_TILE_INDEX)
 	if hole_column >= 0 and hole_column < width:
 		garbage_row[hole_column] = -1
-	grid.append(garbage_row)
 	
-	if top_row_occupied:
-		game_over.emit()
+	var buffer_overflowed: bool = _shift_up_and_insert(garbage_row)
+	if buffer_overflowed:
+		_trigger_game_over()
 
 func _emit_active_piece() -> void:
 	var world_cells: Array[Vector2i] = []
 	for offset in active_offsets:
-		world_cells.append(active_pos + offset)
+		var cell = active_pos + offset
+		if cell.y >= -BUFFER_HEIGHT: # Allow active piece cells inside the buffer zone to emit
+			world_cells.append(cell)
 	active_piece_moved.emit(world_cells, active_piece_index)
 
 func get_ghost_position() -> Vector2i:
@@ -656,6 +760,10 @@ func duplicate_snapshot() -> TetrisEngine:
 	for row in grid:
 		copy.grid.append(row.duplicate())
 	
+	copy._buffer_grid.clear()
+	for row in _buffer_grid:
+		copy._buffer_grid.append(row.duplicate())
+	
 	copy.active_piece_type = active_piece_type
 	copy.active_piece_index = active_piece_index
 	copy.active_offsets = active_offsets.duplicate()
@@ -670,6 +778,7 @@ func duplicate_snapshot() -> TetrisEngine:
 	return copy
 
 func hold_active_piece() -> void:
+	if is_topped_out: return
 	if not can_hold: return
 	
 	can_hold = false
@@ -697,3 +806,6 @@ func hold_active_piece() -> void:
 		_emit_active_piece()
 		
 	hold_changed.emit(hold_piece_type)
+
+func get_buffer_grid() -> Array:
+	return _buffer_grid

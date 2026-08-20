@@ -1,5 +1,8 @@
 class_name Board extends Control
 
+signal board_topped_out
+signal board_reset
+
 const TARGET_TILE_SIZE: float = 27.0
 
 @export var autostart:bool = false
@@ -23,6 +26,13 @@ var GRID_OFFSET := Vector2i(-BOARD_SIZE.x / 2, -BOARD_SIZE.y / 2)
 
 @onready var tick: Label = $BoardPivot/AnimationPivot/tick
 @onready var anim: AnimationPlayer = %anim
+
+@onready var kos_label: Label = %KOs
+@onready var spin_label: Label = %spin
+@onready var clear_label: Label = %clear
+@onready var combo_label: Label = %combo
+@onready var b2b_label: Label = %b2b
+
 
 var engine: TetrisEngine 
 var pieces_controller: PiecesController
@@ -54,6 +64,12 @@ var b2b_streak: int = 0
 
 func _ready() -> void:
 	_setup_board_scale()
+	
+	kos_label.text = ""
+	b2b_label.text = ""
+	spin_label.text = ""
+	clear_label.text = ""
+	combo_label.text = ""
 	if autostart: start_sequence()
 
 func _process(delta: float) -> void:
@@ -254,6 +270,7 @@ func _initialize_engine() -> void:
 	engine.garbage_applied.connect(_on_garbage_applied)
 	engine.garbage_received.connect(func(_pending_total: int): _update_garbage_display())
 	engine.garbage_applied.connect(func(_rows_added: int): _update_garbage_display())
+	engine.game_over.connect(_on_topout)
 	
 	if is_battle and not EventBus.send_garbage.is_connected(_on_network_garbage_received):
 		EventBus.send_garbage.connect(_on_network_garbage_received)
@@ -287,11 +304,24 @@ func _initialize_engine() -> void:
 
 func _on_board_updated(grid_matrix: Array) -> void:
 	placed_tiles_layer.clear()
+	
+	# 1. Render visible grid (y >= 0)
 	for y in range(grid_matrix.size()):
 		for x in range(grid_matrix[y].size()):
 			var cell_type = grid_matrix[y][x]
 			if cell_type != -1:
 				placed_tiles_layer.set_cell(Vector2i(x, y) + GRID_OFFSET, 0, Vector2i(cell_type, 0))
+
+	# 2. Render buffer grid (y < 0)
+	if engine != null:
+		var buffer_grid = engine.get_buffer_grid()
+		var buf_size = buffer_grid.size()
+		for buf_idx in range(buf_size):
+			var y = buf_idx - buf_size # Maps indices 0..19 to -20..-1
+			for x in range(buffer_grid[buf_idx].size()):
+				var cell_type = buffer_grid[buf_idx][x]
+				if cell_type != -1:
+					placed_tiles_layer.set_cell(Vector2i(x, y) + GRID_OFFSET, 0, Vector2i(cell_type, 0))
 
 func _on_active_piece_moved(piece_cells: Array[Vector2i], piece_type: int) -> void:
 	active_piece_layer.clear()
@@ -302,16 +332,40 @@ func _on_active_piece_moved(piece_cells: Array[Vector2i], piece_type: int) -> vo
 		
 	var ghost_origin = engine.get_ghost_position()
 	for offset in engine.active_offsets:
-		ghost_piece_layer.set_cell(ghost_origin + offset + GRID_OFFSET, 0, Vector2i(piece_type, 0))
+		var cell = ghost_origin + offset
+		if cell.y >= -engine.BUFFER_HEIGHT: # Allow ghost cells in the buffer zone to render
+			ghost_piece_layer.set_cell(cell + GRID_OFFSET, 0, Vector2i(piece_type, 0))
 
-func _on_lines_cleared(line_count: int, combo_count: int) -> void:
+func _on_lines_cleared(line_count: int, combo_count: int, is_tspin:bool) -> void:
 	EventBus.lines_cleared.emit(line_count, combo_count)
 	Audio.play_sound("clear"+str(line_count) if line_count < 5 else "clear4")
 	Audio.play_sound("combo"+str(combo_count) if combo_count < 5 else "combo7")
 	if line_count == 4:
 		b2b_streak += 1
+	elif is_tspin:
+		b2b_streak += 1
 	elif line_count > 0:
 		b2b_streak = 0
+	_update_clear_message(line_count, combo_count, is_tspin)
+
+func _update_clear_message(line_count:int, combo_count:int, is_tspin:bool):
+	var combo_message = str(combo_count) + " Combo" if combo_count > 0 else ""
+	var spin_message = "t-spin" if is_tspin else ""
+	var b2b_message = "back-to-back" if b2b_streak>1 else ""
+	var clear_message:String
+	match line_count:
+		1: clear_message = "single"
+		2: clear_message = "double"
+		3: clear_message = "triple"
+		4: clear_message = "quad"
+	
+	b2b_label.text = b2b_message
+	spin_label.text = spin_message
+	clear_label.text = clear_message
+	combo_label.text = combo_message
+	
+func _update_knockouts():
+	pass
 
 func _on_garbage_sent(chunks: Array) -> void:
 	print("[GARBAGE][BOARD ", player_id, "] engine wants to send ", chunks, " to ", target_id, " | is_battle=", is_battle)
@@ -336,6 +390,44 @@ func _on_garbage_applied(rows_added: int) -> void:
 	if rows_added <= 0 or placed_tiles_layer == null:
 		return
 
+## True once this board's engine has topped out. The engine itself is the
+## actual enforcement point (every mutating call - move/rotate/hold/drop/lock
+## delay/garbage draining - checks this and no-ops), so any child that reads
+## input or plans moves (PiecesController, a bot board, network-applied
+## moves) automatically stops affecting the game the instant this flips true.
+## This getter is just for UI/other systems that want to know the state too
+## (e.g. showing a "topped out" banner) without reaching into engine directly.
+func is_topped_out() -> bool:
+	return engine != null and engine.is_topped_out
+
+func _on_topout() -> void:
+	print("[TOPOUT][BOARD ", player_id, "] topped out - board frozen until reset() is called")
+	Audio.play_sound("KO")
+	tick.text = "KO!"
+	anim.play("popup")
+	board_topped_out.emit()
+
+## Fully resets this board back to a fresh game state after a topout (or any
+## time a clean restart is wanted). engine.start_game() wipes the grid, queue,
+## hold, and pending garbage AND clears engine.is_topped_out - that flag is
+## what's been silently blocking every mutating engine call, so clearing it
+## is what actually lets input/bot/network control the board again. Board-
+## side visuals (meter, b2b streak) are reset here to match, since the engine
+## has no notion of those.
+func reset() -> void:
+	if engine == null:
+		return
+	
+	b2b_streak = 0
+	engine.start_game()
+	
+	_target_meter_height = 0
+	if _meter_stylebox != null:
+		_meter_stylebox.border_width_bottom = 0
+	_update_garbage_display()
+	
+	board_reset.emit()
+
 func _update_garbage_display() -> void:
 	if engine == null or meter == null:
 		return
@@ -350,7 +442,7 @@ func _update_garbage_display() -> void:
 	if _meter_stylebox == null:
 		var base_stylebox: StyleBox = meter.get_theme_stylebox("panel")
 		_meter_stylebox = base_stylebox.duplicate() as StyleBoxFlat if base_stylebox is StyleBoxFlat else StyleBoxFlat.new()
-		meter.add_theme_stylebox_override("panel", _meter_stylebox)
+		meter.add_theme_stylebox_override("panel", _meter_stylebox) 
 
 	var fill_ratio: float = float(total_garbage) / float(GARBAGE_METER_MAX_LINES)
 	#_meter_stylebox.border_width_bottom = int(meter.size.y * fill_ratio)

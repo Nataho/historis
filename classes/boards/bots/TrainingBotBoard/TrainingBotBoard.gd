@@ -96,7 +96,7 @@ func _step_ai() -> void:
 		var action_idx: int = await _receive_action_from_python()
 
 		if was_done:
-			engine.start_game()
+			reset()
 			prev_metrics = _get_board_metrics()
 			call_deferred("_step_ai")
 			return
@@ -218,8 +218,8 @@ func _note_random_fallback(reason: String) -> void:
 	_random_fallback_count += 1
 	push_warning("[TRAIN] action FELL BACK TO RANDOM (%s) — this step is NOT from PPO. Running total: %d real, %d random." % [reason, _real_action_count, _random_fallback_count])
 
-func _on_lines_cleared(line_count: int, combo_count: int) -> void:
-	super._on_lines_cleared(line_count, combo_count)
+func _on_lines_cleared(line_count: int, combo_count: int, is_tspin:bool) -> void:
+	super._on_lines_cleared(line_count, combo_count, is_tspin)
 	match line_count:
 		1: accumulated_reward += 5.0
 		2: accumulated_reward += 15.0

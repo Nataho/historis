@@ -14,6 +14,14 @@ var onnx_runner: Object = null
 var is_thinking: bool = false
 var model_session: Object = null
 
+# Distributional evidence for whether a model's decisions are a
+# genuine learned pattern vs a fixed bias — one-off predictions are
+# too easy to over-read anecdotally.
+var _x_tally: Dictionary = {}
+var _hold_true_count: int = 0
+var _hold_false_count: int = 0
+const _TALLY_SUMMARY_INTERVAL: int = 50
+
 func _ready() -> void:
 	super._ready()
 	_load_onnx_model()
@@ -61,7 +69,30 @@ func _get_best_action_from_obs(obs: PackedFloat32Array) -> int:
 
 	# Print model predictions to output
 	print("[AI Prediction] Selected Action Index: ", best_idx, " | Logit Score: ", max_score)
+	_tally_prediction(best_idx)
 	return best_idx
+
+func _tally_prediction(action_idx: int) -> void:
+	var decoded: Dictionary = decode_action(action_idx)
+	var x: int = decoded["target_x"]
+	var used_hold: bool = decoded["use_hold"]
+
+	_x_tally[x] = _x_tally.get(x, 0) + 1
+	if used_hold:
+		_hold_true_count += 1
+	else:
+		_hold_false_count += 1
+
+	var total: int = _hold_true_count + _hold_false_count
+	if total % _TALLY_SUMMARY_INTERVAL == 0:
+		var x_line: String = ""
+		for xi in range(10):
+			x_line += "%d:%d  " % [xi, _x_tally.get(xi, 0)]
+		print("[AI TALLY] n=%d  hold=%d/%d (%.0f%%)  target_x counts -> %s" % [
+			total, _hold_true_count, total,
+			100.0 * float(_hold_true_count) / float(total),
+			x_line
+		])
 
 func _on_ai_turn_ready(_next_pieces: Array[String]) -> void:
 	if engine == null or engine.active_piece_type.is_empty() or is_thinking:

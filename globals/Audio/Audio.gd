@@ -57,6 +57,8 @@ func _enter_tree() -> void:
 		"combo5": [preload("uid://5i4btyjrbx4b"), 0],
 		"combo6": [preload("uid://rx5me2ysuwmb"), 0],
 		"combo7": [preload("uid://c1cbhrgnjs5fr"), 0],
+		
+		"KO": [preload("uid://de6vqyx6mixmg"), 0]
 	}
 
 	_music = {
