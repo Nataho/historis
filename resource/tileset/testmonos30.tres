@@ -1,0 +1,24 @@
+[gd_resource type="TileSet" format=3 uid="uid://dwvbwl5yv0fdm"]
+
+[ext_resource type="Texture2D" uid="uid://dyuridkbcwe4a" path="res://assets/textures/testminos2.png" id="1_ekuum"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_6ihhf"]
+texture = ExtResource("1_ekuum")
+separation = Vector2i(1, 0)
+texture_region_size = Vector2i(30, 30)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+5:0/0 = 0
+6:0/0 = 0
+7:0/0 = 0
+8:0/0 = 0
+9:0/0 = 0
+10:0/0 = 0
+11:0/0 = 0
+
+[resource]
+tile_size = Vector2i(30, 30)
+sources/0 = SubResource("TileSetAtlasSource_6ihhf")

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://codb44wmjs7p"]
+
+[ext_resource type="Script" uid="uid://cn17802xmigfu" path="res://classes/QueueDisplay/QueueDisplay.gd" id="1_0t8b8"]
+
+[node name="QueueDisplay" type="VBoxContainer" unique_id=490464926]
+script = ExtResource("1_0t8b8")

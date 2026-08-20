@@ -1,0 +1,11 @@
+[libraries]
+
+windows.debug.x86_64 = "bin/windows/x86_64/libonnx.windows.debug.x86_64.dll"
+
+[dependencies]
+
+windows.debug.x86_64 = {
+    "bin/windows/x86_64/onnxruntime.dll" : ""
+    "bin/windows/x86_64/onnxruntime_providers_shared.dll" : ""
+}
+

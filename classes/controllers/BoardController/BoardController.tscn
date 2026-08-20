@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bg84j3vlqr7il"]
+
+[ext_resource type="TileSet" uid="uid://bg0eb0typvyd6" path="res://resource/tileset/maintiles.tres" id="1_qv4t1"]
+[ext_resource type="Script" uid="uid://c3ggav6ocivm7" path="res://classes/controllers/BoardController/BoardController.gd" id="1_u1w55"]
+
+[node name="BoardController" type="TileMapLayer" unique_id=1615188402]
+tile_set = ExtResource("1_qv4t1")
+script = ExtResource("1_u1w55")

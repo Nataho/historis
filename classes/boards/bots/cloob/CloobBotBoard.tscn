@@ -1,0 +1,387 @@
+[gd_scene format=3 uid="uid://tabidykj4x63"]
+
+[ext_resource type="Script" uid="uid://cunkwd8ik1bk4" path="res://classes/boards/bots/cloob/CloobBotBoard.gd" id="1_fnb5c"]
+[ext_resource type="TileSet" uid="uid://bg0eb0typvyd6" path="res://resource/tileset/maintiles.tres" id="2_lwufv"]
+[ext_resource type="Script" uid="uid://bjy7ctqj3rkoc" path="res://classes/QueueSlot/QueueSlot.gd" id="3_ixgav"]
+[ext_resource type="FontFile" uid="uid://cm0kofx4wpdln" path="res://assets/fonts/KRKZ Blockes 2(2).ttf" id="3_yb4pm"]
+[ext_resource type="Script" uid="uid://cn17802xmigfu" path="res://classes/QueueDisplay/QueueDisplay.gd" id="4_yb4pm"]
+[ext_resource type="Texture2D" uid="uid://053h2e36ucy2" path="res://assets/textures/tiles.png" id="5_osu1j"]
+
+[sub_resource type="Animation" id="Animation_3liot"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("tick:offset_transform_scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_fo5xl"]
+resource_name = "popup"
+length = 0.060000000000000005
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("tick:offset_transform_scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.03333333, 0.059642334),
+"transitions": PackedFloat32Array(5.2780304, 1, 1),
+"update": 0,
+"values": [Vector2(0.75, 0.75), Vector2(1.1, 1.1), Vector2(1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_ixgav"]
+_data = {
+&"RESET": SubResource("Animation_3liot"),
+&"popup": SubResource("Animation_fo5xl")
+}
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yb4pm"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+border_width_left = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color(0.06469657, 0.06469653, 0.06469646, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+expand_margin_left = 10.0
+expand_margin_top = 10.0
+expand_margin_right = 10.0
+expand_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_osu1j"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.101960786, 0.101960786, 0.101960786, 0)
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color(0.06469657, 0.06469653, 0.06469646, 1)
+corner_radius_top_left = 10
+corner_radius_bottom_left = 10
+expand_margin_left = 10.0
+expand_margin_top = 10.0
+expand_margin_right = 10.0
+expand_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vyr54"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.101960786, 0.101960786, 0.101960786, 0)
+border_color = Color(1, 0.0627451, 0.0627451, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_0xowp"]
+font = ExtResource("3_yb4pm")
+font_size = 120
+font_color = Color(1, 0.7921569, 0, 1)
+outline_size = 20
+outline_color = Color(0.68235296, 0.3019608, 0, 1)
+stacked_outline_count = 1
+stacked_outline_0/size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ngu35"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color(0.06469657, 0.06469653, 0.06469646, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+expand_margin_left = 10.0
+expand_margin_top = 10.0
+expand_margin_right = 10.0
+expand_margin_bottom = 10.0
+
+[node name="CloobBotBoard" type="Control" unique_id=1254551005]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fnb5c")
+debug = false
+target_pps = 10.0
+pps_jitter = 0.5
+autostart = true
+
+[node name="anim" type="AnimationPlayer" parent="." unique_id=759073937]
+unique_name_in_owner = true
+root_node = NodePath("../BoardPivot/AnimationPivot")
+libraries/ = SubResource("AnimationLibrary_ixgav")
+
+[node name="BoardPivot" type="Control" parent="." unique_id=1544148538]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.5, 0.5)
+
+[node name="BG" type="Panel" parent="BoardPivot" unique_id=678549188]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -300.0
+offset_right = 150.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_yb4pm")
+
+[node name="Garbage_Meter" type="Panel" parent="BoardPivot" unique_id=1695960940]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -166.0
+offset_top = -300.0
+offset_right = -160.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_osu1j")
+
+[node name="Meter" type="Panel" parent="BoardPivot/Garbage_Meter" unique_id=194073749]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -3.0
+offset_top = -300.0
+offset_right = 3.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_vyr54")
+
+[node name="GridBackground" type="TileMapLayer" parent="BoardPivot" unique_id=2115898076]
+unique_name_in_owner = true
+tile_set = ExtResource("2_lwufv")
+
+[node name="PlacedTiles" type="TileMapLayer" parent="BoardPivot" unique_id=1462135775]
+unique_name_in_owner = true
+tile_map_data = PackedByteArray(0, 0, 252, 255, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+tile_set = ExtResource("2_lwufv")
+
+[node name="ActivePieceLayer" type="TileMapLayer" parent="BoardPivot" unique_id=317057731]
+unique_name_in_owner = true
+tile_set = ExtResource("2_lwufv")
+
+[node name="GhostPieceLayer" type="TileMapLayer" parent="BoardPivot" unique_id=328228400]
+unique_name_in_owner = true
+self_modulate = Color(1, 1, 1, 0.39215687)
+tile_set = ExtResource("2_lwufv")
+
+[node name="Dependency" type="TileMapLayer" parent="BoardPivot" unique_id=1010155365]
+unique_name_in_owner = true
+self_modulate = Color(1, 1, 1, 0.39215687)
+tile_set = ExtResource("2_lwufv")
+
+[node name="AnimationPivot" type="Control" parent="BoardPivot" unique_id=1355978701]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="tick" type="Label" parent="BoardPivot/AnimationPivot" unique_id=159874519]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+offset_transform_enabled = true
+text = "g0!"
+label_settings = SubResource("LabelSettings_0xowp")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HoldSlot" type="Control" parent="BoardPivot" unique_id=1573358914]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 100)
+anchors_preset = 0
+offset_left = -276.0
+offset_top = -250.0
+offset_right = -176.0
+offset_bottom = -150.0
+script = ExtResource("3_ixgav")
+
+[node name="bg" type="Panel" parent="BoardPivot/HoldSlot" unique_id=168534499]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ngu35")
+
+[node name="Queue_pivot" type="Control" parent="BoardPivot" unique_id=774821354]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 158.0
+offset_top = -250.0
+offset_right = 233.0
+offset_bottom = 176.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Queue" type="VBoxContainer" parent="BoardPivot/Queue_pivot" unique_id=1962610855]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -284.0
+offset_right = 50.0
+offset_bottom = 284.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.75, 0.75)
+pivot_offset = Vector2(50, 284)
+theme_override_constants/separation = 17
+alignment = 1
+script = ExtResource("4_yb4pm")
+tile_texture = ExtResource("5_osu1j")
+
+[node name="q1" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=369760966]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+script = ExtResource("3_ixgav")
+tile_texture = ExtResource("5_osu1j")
+
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q1" unique_id=2116060747]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ngu35")
+
+[node name="q2" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1303294098]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+offset_transform_scale = Vector2(0.9, 0.9)
+script = ExtResource("3_ixgav")
+tile_texture = ExtResource("5_osu1j")
+
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q2" unique_id=493221045]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ngu35")
+
+[node name="q3" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=215380288]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+offset_transform_scale = Vector2(0.8, 0.8)
+script = ExtResource("3_ixgav")
+tile_texture = ExtResource("5_osu1j")
+
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q3" unique_id=1552294289]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ngu35")
+
+[node name="q4" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1668678281]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+offset_transform_scale = Vector2(0.7, 0.7)
+script = ExtResource("3_ixgav")
+tile_texture = ExtResource("5_osu1j")
+
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q4" unique_id=1993913159]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ngu35")
+
+[node name="q5" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1189677534]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+offset_transform_scale = Vector2(0.6, 0.6)
+script = ExtResource("3_ixgav")
+tile_texture = ExtResource("5_osu1j")
+
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q5" unique_id=1491087899]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ngu35")

@@ -1,0 +1,10 @@
+[libraries]
+
+linux.debug.x86_64 = "bin/linux/x86_64/libonnx.linux.debug.x86_64.so"
+
+[dependencies]
+
+linux.debug.x86_64 = {
+    "bin/linux/x86_64/libonnxruntime.so" : ""
+}
+
