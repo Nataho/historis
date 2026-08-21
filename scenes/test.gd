@@ -49,6 +49,23 @@ func _apply_speed_settings() -> void:
 	Engine.time_scale = 1.0 if slow_down else 20.0
 
 func _on_player_topped_out(victim_id: int, _attacker_id: int) -> void:
+	# 1. Check KOs directly from the boards to see if the match is over
+	var match_boards: Array[Board] = []
+	for child in hbox.get_children():
+		if child is Board:
+			match_boards.append(child)
+			
+	if match_boards.size() >= 2:
+		var p1_ko: int = match_boards[0].knockouts
+		var p2_ko: int = match_boards[1].knockouts
+		print("[MATCH SCORE] P1 KOs: %d | P2 KOs: %d" % [p1_ko, p2_ko])
+		
+		# Trigger the save and restart if someone reaches 3 wins
+		if p1_ko >= 3 or p2_ko >= 3:
+			print("[TEST SCENE] 3 KOs reached! Restarting scene to save recordings...")
+			call_deferred("_restart_scene")
+			return
+
 	# Only execute visual delay reset if slow_down is active; in fast mode, generator boards reset themselves immediately
 	if not slow_down:
 		return
@@ -58,3 +75,6 @@ func _on_player_topped_out(victim_id: int, _attacker_id: int) -> void:
 		await get_tree().create_timer(1.5).timeout
 		if slow_down and victim_board.is_topped_out():
 			victim_board.reset()
+
+func _restart_scene() -> void:
+	get_tree().reload_current_scene()

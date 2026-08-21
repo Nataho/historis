@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dxbk55qrbklye"]
+
+[ext_resource type="Script" uid="uid://bcurl3wxke1rn" path="res://globals/Palette/Palette.gd" id="1_31el1"]
+
+[node name="Palette" type="Node" unique_id=1107493068]
+script = ExtResource("1_31el1")
