@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 GODOT_BIN="/home/nataho/.local/share/Steam/steamapps/common/Godot Engine/godot.x11.opt.tools.64"
-PROJECT_PATH="/home/nataho/Godot/hisotris"
+PROJECT_PATH="/home/nataho/Godot/historis"
 SCENE_PATH="res://classes/boards/bots/TrainingBotBoard/TrainingBotBoard.tscn"
 
 NUM_ENVS="${1:-14}"

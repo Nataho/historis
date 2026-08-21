@@ -49,14 +49,14 @@ COLOR_GREEN = "\033[92m"
 COLOR_YELLOW_BOLD = "\033[1;93m"  # Fixed ANSI syntax
 
 # --- Logging & Export Knobs -------------------------------------------
-N_STEPS = 256                       # Increased for GPU throughput
+N_STEPS = 1024                       # Increased for GPU throughput
 SOCKET_TIMEOUT_SEC = 20.0
 
 SHOW_STEP_LOGS = False              # Set True to see individual step actions
 LOG_ONLY_NONZERO_STEPS = True       # If SHOW_STEP_LOGS is True, ignores 0.0 reward steps
-MIN_EPISODE_REWARD_TO_LOG = -995.0  # Filters out normal non-record death episodes
+MIN_EPISODE_REWARD_TO_LOG = -600.0  # Filters out normal non-record death episodes
 
-SILENT_CHECKPOINTS = True           # Suppresses export logs during routine saves
+SILENT_CHECKPOINTS = False           # Suppresses export logs during routine saves
 CHECKPOINT_FREQ_STEPS = 10000       # Saves in background every 10,000 steps
 
 
@@ -319,6 +319,28 @@ class CheckpointAndExportCallback(BaseCallback):
         self.save_freq = save_freq
         self.silent = silent
 
+    def _on_rollout_end(self) -> None:
+        # Retrieves completed episode metrics directly from SB3's buffer
+        ep_info_buffer = getattr(self.model, "ep_info_buffer", None)
+        
+        if ep_info_buffer and len(ep_info_buffer) > 0:
+            lengths = [ep["l"] for ep in ep_info_buffer]
+            rewards = [ep["r"] for ep in ep_info_buffer]
+
+            avg_steps = float(np.mean(lengths))
+            best_steps = int(np.max(lengths))
+            worst_steps = int(np.min(lengths))
+
+            avg_score = float(np.mean(rewards))
+            best_score = float(np.max(rewards))
+            worst_score = float(np.min(rewards))
+
+            print("\n" + "=" * 70, flush=True)
+            print("📊 [ROLLOUT METRICS SUMMARY]", flush=True)
+            print(f"   Steps -> Avg: {avg_steps:.1f} | Best: {best_steps} | Worst: {worst_steps}", flush=True)
+            print(f"   Score -> Avg: {avg_score:.1f} | Best: {best_score:.1f} | Worst: {worst_score:.1f}", flush=True)
+            print("=" * 70 + "\n", flush=True)
+
     def _on_step(self) -> bool:
         # Trigger immediate export on all-time high score
         if getattr(self.training_env, "new_high_score_flag", False):
@@ -361,6 +383,10 @@ def main() -> None:
         model.num_timesteps = 0
     else:
         log("Creating a fresh PPO model (no checkpoint found).")
+        policy_kwargs = dict(
+            net_arch=dict(pi=[256, 256, 128], vf=[256, 256, 128]),
+            activation_fn=torch.nn.ReLU,
+        )
         model = PPO(
             "MlpPolicy",
             env,
@@ -368,9 +394,10 @@ def main() -> None:
             verbose=1,
             n_steps=N_STEPS,
             batch_size=min(512, N_STEPS * num_envs),
-            learning_rate=3e-4,
+            learning_rate=1e-4,
             gamma=0.99,
-            ent_coef=0.01,
+            ent_coef=0.001,
+            policy_kwargs=policy_kwargs,
             tensorboard_log=TENSORBOARD_DIR,
         )
 

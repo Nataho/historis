@@ -9,6 +9,8 @@ extends Board
 @export var rotate_delay_ms: float = 30.0
 @export var drop_delay_sec: float = 0.05
 @export var force_instant_placement: bool = false
+@export var debug_slow_mode: bool = false
+
 
 var onnx_runner: Object = null
 var is_thinking: bool = false
@@ -113,14 +115,53 @@ func _on_ai_turn_ready(_next_pieces: Array[String]) -> void:
 	is_thinking = false
 
 
+var bot: TetrisBot = TetrisBot.new()
+
+func _execute_srs_rotation(target_rot: int, kick_table: Dictionary, p_type: String, apply_handling: bool) -> bool:
+	if engine == null or engine.rotation_state == target_rot or p_type == "O":
+		return true
+
+	var attempts: int = 0
+	while engine.rotation_state != target_rot and attempts < 4:
+		attempts += 1
+		var diff: int = posmod(target_rot - engine.rotation_state, 4)
+		var rotated: bool = false
+
+		if diff == 1:
+			# Clockwise (CW) SRS transition (e.g. 0->1, 1->2, 2->3, 3->0)
+			rotated = engine.rotate_piece(true, kick_table)
+		elif diff == 3:
+			# Counter-Clockwise (CCW) SRS transition (e.g. 0->3, 3->2, 2->1, 1->0)
+			rotated = engine.rotate_piece(false, kick_table)
+		elif diff == 2:
+			# 180 degree rotation: try 180 kick table first, then 2-step CW/CCW
+			var kick_180: Dictionary = pieces_controller.get_180_kick_table(p_type) if pieces_controller != null else {}
+			if not kick_180.is_empty():
+				rotated = engine.rotate_180(kick_180)
+			if not rotated:
+				rotated = engine.rotate_piece(true, kick_table)
+				if not rotated:
+					rotated = engine.rotate_piece(false, kick_table)
+
+		# Fallback if primary SRS kick direction was blocked: try the opposite turn
+		if not rotated:
+			rotated = engine.rotate_piece(false, kick_table) if diff == 1 else engine.rotate_piece(true, kick_table)
+
+		if not rotated:
+			return false
+
+		if apply_handling and rotate_delay_ms > 0:
+			await get_tree().create_timer(rotate_delay_ms / 1000.0).timeout
+
+	return engine.rotation_state == target_rot
+
 func execute_action(action: Dictionary) -> void:
 	if engine == null or engine.active_piece_type.is_empty():
 		return
 
-	# --- HANDLING CHECK ---
-	# Skip handling delays if training OR if forced instant placement
+	# Enable delays if debug_slow_mode is ON, even during training
 	var is_training: bool = (self is TrainingBotBoard)
-	var apply_handling: bool = not is_training and not force_instant_placement
+	var apply_handling: bool = (not is_training and not force_instant_placement) or debug_slow_mode
 
 	var target_rot: int = action.get("target_rot", 0)
 	var target_x: int = action.get("target_x", 3)
@@ -134,18 +175,64 @@ func execute_action(action: Dictionary) -> void:
 		if engine.active_piece_type.is_empty():
 			return
 
-	# 2. Rotation Handling
-	var kick_table: Dictionary = pieces_controller.get_kick_table(engine.active_piece_type)
-	if not kick_table.is_empty():
-		var rotate_attempts: int = 0
-		while engine.rotation_state != target_rot and rotate_attempts < 4:
-			rotate_attempts += 1
-			if not engine.rotate_piece(true, kick_table):
-				break
-			if apply_handling and rotate_delay_ms > 0:
-				await get_tree().create_timer(rotate_delay_ms / 1000.0).timeout
+	var p_type: String = engine.active_piece_type
+	var kick_table: Dictionary = pieces_controller.get_kick_table(p_type) if pieces_controller != null else {}
+	var offsets: Array[Vector2i] = pieces_controller.get_state_offsets(p_type, target_rot) if pieces_controller != null else []
+	var drop_y: int = bot._get_drop_y_raw(engine.grid, engine.width, engine.height, offsets, target_x)
 
-	# 3. Horizontal Movement Handling
+	# If target_x is out of bounds or blocked for this rotation, find closest valid column
+	if drop_y == -1 and not offsets.is_empty():
+		var best_dist: int = 999
+		var best_x: int = target_x
+		for test_x in range(engine.width):
+			var test_y: int = bot._get_drop_y_raw(engine.grid, engine.width, engine.height, offsets, test_x)
+			if test_y != -1:
+				var dist: int = abs(test_x - target_x)
+				if dist < best_dist:
+					best_dist = dist
+					best_x = test_x
+					drop_y = test_y
+		if drop_y != -1:
+			target_x = best_x
+
+	if drop_y != -1:
+		var target_pos := Vector2i(target_x, drop_y)
+		var reach_info: Dictionary = bot._evaluate_reachability(
+			engine, p_type, engine.active_pos, engine.rotation_state, target_pos, target_rot, drop_y, false
+		)
+
+		if reach_info.get("reachable", false) and not reach_info.get("path", []).is_empty():
+			var path: Array = reach_info["path"]
+			var req_soft_drop: bool = reach_info.get("requires_soft_drop", false) or target_pos.y != drop_y
+
+			for node: Vector3i in path:
+				# Step rotation respecting SRS (CW, CCW, or 180)
+				if engine.rotation_state != node.z:
+					await _execute_srs_rotation(node.z, kick_table, p_type, apply_handling)
+
+				# Step horizontal
+				while engine.active_pos.x != node.x:
+					var h_dir = Vector2i.RIGHT if node.x > engine.active_pos.x else Vector2i.LEFT
+					if not engine.move_piece(h_dir):
+						break
+					if apply_handling and move_delay_ms > 0:
+						await get_tree().create_timer(move_delay_ms / 1000.0).timeout
+
+				# Step vertical (soft drop) ONLY when navigating under overhangs/tucks
+				if req_soft_drop:
+					while engine.active_pos.y < node.y:
+						if not engine.move_piece(Vector2i.DOWN):
+							break
+						if apply_handling and drop_delay_sec > 0:
+							await get_tree().create_timer(drop_delay_sec).timeout
+
+			engine.hard_drop()
+			return
+
+	# Fallback: SRS Placement
+	if not kick_table.is_empty():
+		await _execute_srs_rotation(target_rot, kick_table, p_type, apply_handling)
+
 	var current_x: int = engine.active_pos.x
 	var diff_x: int = target_x - current_x
 	var dir: Vector2i = Vector2i.RIGHT if diff_x > 0 else Vector2i.LEFT
@@ -157,7 +244,6 @@ func execute_action(action: Dictionary) -> void:
 		if apply_handling and move_delay_ms > 0:
 			await get_tree().create_timer(move_delay_ms / 1000.0).timeout
 
-	# 4. Drop Delay Handling
 	if apply_handling and drop_delay_sec > 0:
 		await get_tree().create_timer(drop_delay_sec).timeout
 

@@ -85,12 +85,12 @@ func _start_recording_session() -> void:
 		_record_file = null
 	DirAccess.make_dir_recursive_absolute(demo_output_dir)
 	var timestamp: String = Time.get_datetime_string_from_system().replace(":", "-")
-	var path: String = demo_output_dir.path_join("session_%s.bin" % timestamp)
+	var path: String = demo_output_dir.path_join("session_%s_p%d_%d.bin" % [timestamp, player_id, randi() % 100000])
 	_record_file = FileAccess.open(path, FileAccess.WRITE)
 	if _record_file == null:
 		push_warning("[RECORD] Could not open '%s' for writing (error %s) — recording disabled for this session." % [path, FileAccess.get_open_error()])
 	else:
-		print("[RECORD] Recording human play to ", path)
+		print("[RECORD][BOARD %d] Recording human play to: %s" % [player_id, path])
 	_has_prior_turn = false
 
 func _on_recorder_piece_moved(_piece_cells: Array[Vector2i], _piece_type: int) -> void:

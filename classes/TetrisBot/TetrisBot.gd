@@ -323,35 +323,33 @@ func _evaluate_placement(base_grid: Array, width: int, height: int, sim_grid: Ar
 	return score
 
 func _evaluate_reachability(engine: TetrisEngine, p_type: String, start_pos: Vector2i, start_rot: int, target_pos: Vector2i, target_rot: int, drop_y: int, is_hold: bool) -> Dictionary:
-	# Direct vertical shaft fast-path.
-	# IMPORTANT: only valid when no rotation is required. This shortcut never
-	# checks kick legality, so if a rotation is needed we MUST fall through to
-	# the full BFS below (which validates every rotation step against the
-	# real kick table) instead of just assuming "rotate then slide" is free.
-	# Skipping this check was letting the bot approve placements it could not
-	# actually execute, which is what made soft-dropped pieces stall short of
-	# their planned destination.
-	if target_pos.y == drop_y and start_rot == target_rot:
-		var target_offsets = _get_state_offsets_for_bot(engine, p_type, target_rot, is_hold)
-		if not target_offsets.is_empty():
+	var target_offsets = _get_state_offsets_for_bot(engine, p_type, target_rot, is_hold)
+	if target_offsets.is_empty():
+		return {"reachable": false, "path": [], "requires_soft_drop": false}
+
+	# 1. Elevated Direct Slide & Hard-Drop Fast-Path (NO SOFT DROP REQUIRED):
+	# If this is a standard top-down drop (target_pos.y == drop_y), check if the piece
+	# can fit at spawn in target_rot (or start_rot) and slide horizontally to target_x.
+	if target_pos.y == drop_y:
+		# Check if the piece fits at start_pos in target_rot (or if start_rot == target_rot)
+		if _can_fit_raw(engine.grid, engine.width, engine.height, target_offsets, start_pos):
 			var dir = 1 if target_pos.x > start_pos.x else -1
 			var curr_x = start_pos.x
-			var clear_path := true
-			
-			while true:
-				if not _can_fit_raw(engine.grid, engine.width, engine.height, target_offsets, Vector2i(curr_x, start_pos.y)):
-					clear_path = false
-					break
-				if curr_x == target_pos.x: break
+			var clear_corridor := true
+			while curr_x != target_pos.x:
 				curr_x += dir
+				if not _can_fit_raw(engine.grid, engine.width, engine.height, target_offsets, Vector2i(curr_x, start_pos.y)):
+					clear_corridor = false
+					break
 
-			if clear_path:
+			if clear_corridor:
 				var path_nodes: Array[Vector3i] = [
 					Vector3i(start_pos.x, start_pos.y, start_rot),
+					Vector3i(start_pos.x, start_pos.y, target_rot),
 					Vector3i(target_pos.x, start_pos.y, target_rot),
 					Vector3i(target_pos.x, target_pos.y, target_rot)
 				]
-				return {"reachable": true, "path": path_nodes}
+				return {"reachable": true, "path": path_nodes, "requires_soft_drop": false}
 
 	# Translate-only search, tried whenever the placement doesn't actually
 	# require a different final rotation (this covers tucks/slides under

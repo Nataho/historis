@@ -166,8 +166,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_2x52w")
+onnx_model_path = "res://ai_models/tetris_bot_bc_test.onnx"
 drop_delay_sec = 0.5
+force_instant_placement = true
 autostart = true
+skipcountdown = true
 
 [node name="BoardPivot" type="Control" parent="." unique_id=1662102285]
 layout_mode = 1

@@ -6,6 +6,7 @@ signal board_reset
 const TARGET_TILE_SIZE: float = 27.0
 
 @export var autostart:bool = false
+@export var skipcountdown:bool = false
 
 @export var BOARD_SIZE := Vector2i(10, 20)
 var GRID_OFFSET := Vector2i(-BOARD_SIZE.x / 2, -BOARD_SIZE.y / 2)
@@ -47,7 +48,8 @@ var _target_meter_height
 @export var target_id:int = -1
 @export var is_battle:bool = false
 @export var instant_garbage: bool = false # false = rise 1 row every 0.1s, true = dump all pending garbage at once
-
+var last_attacker: int = -1
+var knockouts:int = 0
 # --- Shared AI observation / action-space contract ---
 # Lives here (not on OnnxBotBoard) so every board that needs it — the AI
 # bots, AND MultiplayerBoard's human-play recorder — reads/encodes it
@@ -70,7 +72,21 @@ func _ready() -> void:
 	spin_label.text = ""
 	clear_label.text = ""
 	combo_label.text = ""
+	tick.text = ""
+	
 	if autostart: start_sequence()
+	_connect_signals()
+
+func _connect_signals() -> void:
+	EventBus.player_topped_out.connect(func(victim_id: int, attacker_id: int) -> void:
+		print("[DEBUG][BOARD %d] Received TopOut Signal -> Victim: %d | Attacker: %d" % [player_id, victim_id, attacker_id])
+		
+		# If this board was the attacker who earned the KO:
+		if attacker_id == player_id and victim_id != player_id:
+			print("[KO!] Board %d knocked out player %d!" % [player_id, victim_id])
+			knockouts += 1
+			_update_knockouts()
+	)
 
 func _process(delta: float) -> void:
 	if engine != null:
@@ -123,53 +139,102 @@ func get_board_state() -> Dictionary:
 ## being valid on whatever board calls this.
 func get_observation_vector() -> PackedFloat32Array:
 	var obs := PackedFloat32Array()
-	obs.resize(413)
-	var idx: int = 0
-
+	var piece_types = ["I", "J", "L", "O", "S", "T", "Z"]
+	
+	# 1. Grid Cells: Binary 0.0 or 1.0 (200 floats: idx 0..199)
 	for y in range(engine.height):
 		for x in range(engine.width):
-			obs[idx] = 1.0 if engine.grid[y][x] != -1 else 0.0
-			idx += 1
+			obs.append(1.0 if engine.grid[y][x] != -1 else 0.0)
+			
+	# 2. Board Metrics: Normalized [0.0 - 1.0] (3 floats: idx 200..202)
+	var metrics: Dictionary = _get_board_metrics()
+	obs.append(float(metrics["max_height"]) / 20.0)
+	obs.append(float(metrics["holes"]) / 20.0)
+	obs.append(float(metrics["bumpiness"]) / 40.0)
 
-	obs[idx] = float(PIECE_ID_MAP.get(engine.hold_piece_type, 0))
-	idx += 1
-	obs[idx] = 1.0 if engine.can_hold else 0.0
-	idx += 1
+	# 3. Active Piece One-Hot Encoding (7 floats: idx 203..209)
+	for p in piece_types:
+		obs.append(1.0 if engine.active_piece_type == p else 0.0)
 
-	for i in range(PREVIEW_COUNT):
-		var piece_key: String = engine.queue[i] if i < engine.queue.size() else ""
-		obs[idx] = float(PIECE_ID_MAP.get(piece_key, 0))
-		idx += 1
+	# 4. Preview Queue One-Hot Encoding: 5 pieces x 7 types (35 floats: idx 210..244)
+	for q_idx in range(5):
+		var q_piece = engine.queue[q_idx] if q_idx < engine.queue.size() else ""
+		for p in piece_types:
+			obs.append(1.0 if q_piece == p else 0.0)
 
-	var immediate_rising: int = engine._garbage_drain_queue.size()
-	var pending_incoming: int = 0
-	for chunk in engine.pending_garbage:
-		pending_incoming += int(chunk.get("lines", 0))
+	# 5. Hold Piece One-Hot Encoding (7 floats: idx 245..251)
+	for p in piece_types:
+		obs.append(1.0 if engine.hold_piece_type == p else 0.0)
 
-	obs[idx] = float(immediate_rising)
-	idx += 1
-	obs[idx] = float(pending_incoming)
-	idx += 1
+	# 6. Status Scalars (4 floats: idx 252..255)
+	obs.append(1.0 if engine.can_hold else 0.0)
+	obs.append(float(engine.get_pending_garbage_total()) / 20.0)
+	obs.append(float(b2b_streak) / 10.0)
+	obs.append(float(max(0, engine.combo_count)) / 10.0)
 
-	obs[idx] = float(b2b_streak)
-	idx += 1
-	obs[idx] = float(max(0, engine.combo_count))
-	idx += 1
-
+	# 7. Opponent Board & Combat State (157 floats: idx 256..412)
 	if opponent_board != null and opponent_board.engine != null:
-		var enemy_eng: TetrisEngine = opponent_board.engine
-		for y in range(enemy_eng.height):
-			for x in range(enemy_eng.width):
-				obs[idx] = 1.0 if enemy_eng.grid[y][x] != -1 else 0.0
-				idx += 1
-		obs[idx] = float(enemy_eng.get_pending_garbage_total())
-		idx += 1
-	else:
-		for i in range(201):
-			obs[idx] = 0.0
-			idx += 1
+		# Opponent Grid bottom 14 rows: 14 x 10 (140 floats: idx 256..395)
+		var opp_grid = opponent_board.engine.grid
+		for y in range(6, 20):
+			for x in range(10):
+				obs.append(1.0 if (y < opp_grid.size() and opp_grid[y][x] != -1) else 0.0)
+		
+		# Opponent Metrics (4 floats: idx 396..399)
+		var opp_metrics = opponent_board._get_board_metrics()
+		obs.append(float(opp_metrics["max_height"]) / 20.0)
+		obs.append(float(opp_metrics["holes"]) / 20.0)
+		obs.append(float(opp_metrics["bumpiness"]) / 40.0)
+		obs.append(float(opponent_board.engine.get_pending_garbage_total()) / 20.0)
+		
+		# Opponent Active Piece (7 floats: idx 400..406)
+		for p in piece_types:
+			obs.append(1.0 if opponent_board.engine.active_piece_type == p else 0.0)
+		
+		# Opponent B2B & KOs (2 floats: idx 407..408)
+		obs.append(float(opponent_board.b2b_streak) / 10.0)
+		obs.append(float(opponent_board.knockouts) / 10.0)
+
+	# Pad any remaining slots up to exact total OBS_SIZE (413)
+	while obs.size() < 413:
+		obs.append(0.0)
 
 	return obs
+
+func _get_board_metrics() -> Dictionary:
+	if engine == null:
+		return {"holes": 0, "bumpiness": 0, "max_height": 0}
+
+	var col_heights: Array[int] = []
+	col_heights.resize(engine.width)
+	col_heights.fill(0)
+	var holes: int = 0
+
+	for x in range(engine.width):
+		var found_top: bool = false
+		for y in range(engine.height):
+			if engine.grid[y][x] != -1:
+				if not found_top:
+					col_heights[x] = engine.height - y
+					found_top = true
+			elif found_top:
+				holes += 1
+
+	var max_h: int = 0
+	for h in col_heights:
+		if h > max_h:
+			max_h = h
+
+	var bumpiness: int = 0
+	for x in range(engine.width - 1):
+		bumpiness += abs(col_heights[x] - col_heights[x + 1])
+
+	return {
+		"holes": holes,
+		"bumpiness": bumpiness,
+		"max_height": max_h,
+		"col_heights": col_heights
+	}
 
 ## action_idx (0-79) -> {target_rot, target_x, use_hold}. See
 ## encode_action() for the inverse, used by the human-play recorder.
@@ -195,8 +260,11 @@ func encode_action(target_rot: int, target_x: int, use_hold: bool) -> int:
 	return local_idx + (40 if use_hold else 0)
 
 func start_sequence():
+	if skipcountdown:
+		start()
+		return
+		
 	await get_tree().create_timer(1).timeout
-	
 	tick.text = "3"
 	Audio.play_sound("tick_3")
 	anim.play("popup")
@@ -252,6 +320,8 @@ func _setup_board_scale() -> void:
 func _initialize_engine() -> void:
 	engine = TetrisEngine.new(BOARD_SIZE.x, BOARD_SIZE.y, PREVIEW_COUNT)
 	engine.instant_garbage = instant_garbage
+	#print(player_id)
+	engine.player_id = int(player_id)
 	
 	pieces_controller = PiecesController.new()
 	add_child(pieces_controller)
@@ -339,7 +409,8 @@ func _on_active_piece_moved(piece_cells: Array[Vector2i], piece_type: int) -> vo
 func _on_lines_cleared(line_count: int, combo_count: int, is_tspin:bool) -> void:
 	EventBus.lines_cleared.emit(line_count, combo_count)
 	Audio.play_sound("clear"+str(line_count) if line_count < 5 else "clear4")
-	Audio.play_sound("combo"+str(combo_count) if combo_count < 5 else "combo7")
+	if combo_count > 0:
+		Audio.play_sound("combo"+str(combo_count) if combo_count < 7 else "combo7")
 	if line_count == 4:
 		b2b_streak += 1
 	elif is_tspin:
@@ -365,7 +436,7 @@ func _update_clear_message(line_count:int, combo_count:int, is_tspin:bool):
 	combo_label.text = combo_message
 	
 func _update_knockouts():
-	pass
+	kos_label.text = str(knockouts) + " KOs" if knockouts > 0 else ""
 
 func _on_garbage_sent(chunks: Array) -> void:
 	print("[GARBAGE][BOARD ", player_id, "] engine wants to send ", chunks, " to ", target_id, " | is_battle=", is_battle)
@@ -383,13 +454,29 @@ func _on_network_garbage_received(chunks: Array, sender_id: int, receiver_id: in
 	print("[GARBAGE][BOARD ", player_id, "] heard EventBus.send_garbage(", chunks, ", sender=", sender_id, ", receiver=", receiver_id, ")")
 	if receiver_id != player_id or engine == null:
 		return
+		
 	print("[GARBAGE][BOARD ", player_id, "] this attack is mine, queuing into engine")
+	
+	# Update last_attacker and tag each chunk with the attacker's ID
+	last_attacker = sender_id
+	for chunk in chunks:
+		chunk["attacker_id"] = sender_id
+		
 	engine.queue_garbage(chunks)
 
 func _on_garbage_applied(rows_added: int) -> void:
 	if rows_added <= 0 or placed_tiles_layer == null:
 		return
-
+		
+func receive_garbage(chunks: Array, attacker_id: int) -> void:
+	last_attacker = attacker_id
+	
+	# Pass the attacker ID into each garbage chunk for engine tracking
+	for chunk in chunks:
+		chunk["attacker_id"] = attacker_id
+		
+	if engine != null:
+		engine.queue_garbage(chunks)
 ## True once this board's engine has topped out. The engine itself is the
 ## actual enforcement point (every mutating call - move/rotate/hold/drop/lock
 ## delay/garbage draining - checks this and no-ops), so any child that reads
@@ -401,10 +488,11 @@ func is_topped_out() -> bool:
 	return engine != null and engine.is_topped_out
 
 func _on_topout() -> void:
-	print("[TOPOUT][BOARD ", player_id, "] topped out - board frozen until reset() is called")
+	print("[TOPOUT][BOARD %d] topped out - board frozen until reset() is called" % player_id)
 	Audio.play_sound("KO")
 	tick.text = "KO!"
-	anim.play("popup")
+	active_piece_layer.clear()
+	ghost_piece_layer.clear()
 	board_topped_out.emit()
 
 ## Fully resets this board back to a fresh game state after a topout (or any
@@ -425,8 +513,9 @@ func reset() -> void:
 	if _meter_stylebox != null:
 		_meter_stylebox.border_width_bottom = 0
 	_update_garbage_display()
-	
+	tick.text = ""
 	board_reset.emit()
+	hold_slot.clear()
 
 func _update_garbage_display() -> void:
 	if engine == null or meter == null:

@@ -292,13 +292,13 @@ func _build_instruction_queue() -> void:
 				action_queue.append({"type": Action.MOVE_X, "target": target_x})
 			curr_x = target_x
 
-		# 3. Soft Drop (Merge consecutive Y steps into one target)
-		if curr_y != target_y:
-			if not action_queue.is_empty() and action_queue[-1]["type"] == Action.DROP_Y:
-				action_queue[-1]["target"] = target_y
-			else:
-				action_queue.append({"type": Action.DROP_Y, "target": target_y})
-			curr_y = target_y
+		# 3. Soft Drop (Merge consecutive Y steps into one target ONLY when soft drop is required)
+		#if curr_y != target_y and req_soft_drop:
+			#if not action_queue.is_empty() and action_queue[-1]["type"] == Action.DROP_Y:
+				#action_queue[-1]["target"] = target_y
+			#else:
+				#action_queue.append({"type": Action.DROP_Y, "target": target_y})
+			#curr_y = target_y
 
 	# 4. Final Lock / Drop
 	var req_soft_drop: bool = target_move.get("requires_soft_drop", false)

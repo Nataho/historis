@@ -6,6 +6,9 @@ extends OnnxBotBoard
 @export var server_port: int = 11000
 @export var auto_reconnect: bool = true
 
+@export_group("factors")
+@export var game_over_factor := 200.0
+@export var placement_factor := 2.0
 var tcp_client: StreamPeerTCP = StreamPeerTCP.new()
 var is_connected_to_python: bool = false
 var is_running_loop: bool = false
@@ -14,10 +17,7 @@ var accumulated_reward: float = 0.0
 var step_done: bool = false
 var prev_metrics: Dictionary = {}
 
-# Action-source diagnostics — the only way to know whether this board is
-# actually being driven by python's PPO decisions or silently degrading
-# to random moves. Logged as a periodic summary rather than per-step
-# since _step_ai() fires very frequently.
+# Action-source diagnostics
 var _real_action_count: int = 0
 var _random_fallback_count: int = 0
 const _ACTION_SUMMARY_INTERVAL: int = 200
@@ -71,7 +71,10 @@ func start_ai_loop() -> void:
 	if is_running_loop:
 		return
 	is_running_loop = true
-	start()
+	if engine == null:
+		start()
+	else:
+		reset()
 	prev_metrics = _get_board_metrics()
 	call_deferred("_step_ai")
 
@@ -115,58 +118,48 @@ func _step_ai() -> void:
 
 	call_deferred("_step_ai")
 
-func _get_board_metrics() -> Dictionary:
-	if engine == null:
-		return {"holes": 0, "bumpiness": 0, "max_height": 0}
-
-	var col_heights: Array[int] = []
-	col_heights.resize(engine.width)
-	col_heights.fill(0)
-	var holes: int = 0
-
-	for x in range(engine.width):
-		var found_top: bool = false
-		for y in range(engine.height):
-			if engine.grid[y][x] != -1:
-				if not found_top:
-					col_heights[x] = engine.height - y
-					found_top = true
-			elif found_top:
-				holes += 1
-
-	var max_h: int = 0
-	for h in col_heights:
-		if h > max_h:
-			max_h = h
-
-	var bumpiness: int = 0
-	for x in range(engine.width - 1):
-		bumpiness += abs(col_heights[x] - col_heights[x + 1])
-
-	return {
-		"holes": holes,
-		"bumpiness": bumpiness,
-		"max_height": max_h
-	}
-
 func _evaluate_placement_reward(prev: Dictionary, curr: Dictionary) -> void:
-	var delta_holes: int = curr.get("holes", 0) - prev.get("holes", 0)
-	var delta_bumpiness: int = curr.get("bumpiness", 0) - prev.get("bumpiness", 0)
-	var curr_height: int = curr.get("max_height", 0)
+	var prev_holes: int = prev.get("holes", 0)
+	var curr_holes: int = curr.get("holes", 0)
+	var delta_holes: int = curr_holes - prev_holes
+
+	var prev_bumpiness: int = prev.get("bumpiness", 0)
+	var curr_bumpiness: int = curr.get("bumpiness", 0)
+	var delta_bumpiness: int = curr_bumpiness - prev_bumpiness
+
 	var prev_height: int = prev.get("max_height", 0)
+	var curr_height: int = curr.get("max_height", 0)
+	var delta_height: int = curr_height - prev_height
 
+	# 1. Base step survival: steady positive reinforcement for staying in the game
+	var step_score: float = 0.15
+
+	# 2. Holes penalty / reward: creating holes makes future survival difficult
 	if delta_holes > 0:
-		accumulated_reward -= delta_holes * 12.0
+		step_score -= delta_holes * 2.5
 	elif delta_holes < 0:
-		accumulated_reward += abs(delta_holes) * 15.0
+		step_score += abs(delta_holes) * 2.5
 
-	accumulated_reward -= delta_bumpiness * 0.8
+	# 3. Bumpiness penalty / reward: maintain flat, organized terrain
+	if delta_bumpiness > 0:
+		step_score -= delta_bumpiness * 0.15
+	elif delta_bumpiness < 0:
+		step_score += abs(delta_bumpiness) * 0.15
 
-	if curr_height > 14:
-		if curr_height < prev_height:
-			accumulated_reward += 12.0
-		if delta_holes > 0:
-			accumulated_reward -= 20.0
+	# 4. Height penalty / reward:
+	# Penalize height ONLY when building higher into the upper danger zone (>12 rows),
+	# and reward downstacking when high up.
+	if curr_height > 12:
+		if delta_height > 0:
+			step_score -= float(delta_height) * 0.8
+		elif delta_height < 0:
+			step_score += float(abs(delta_height)) * 0.5
+	
+	# Critical ceiling danger warning (near topout height >= 17 out of 20)
+	if curr_height >= 17:
+		step_score -= 0.5
+
+	accumulated_reward += step_score
 
 func _send_state_to_python(obs: PackedFloat32Array, reward: float, done: bool) -> void:
 	var packet := PackedByteArray()
@@ -182,7 +175,7 @@ func _send_state_to_python(obs: PackedFloat32Array, reward: float, done: bool) -
 	tcp_client.put_data(packet)
 
 func _receive_action_from_python() -> int:
-	var timeout_frames: int = 120
+	var timeout_frames: int = 1200
 	while tcp_client.get_status() == StreamPeerTCP.STATUS_CONNECTED and tcp_client.get_available_bytes() < 4 and timeout_frames > 0:
 		tcp_client.poll()
 		await get_tree().process_frame
@@ -218,31 +211,38 @@ func _note_random_fallback(reason: String) -> void:
 	_random_fallback_count += 1
 	push_warning("[TRAIN] action FELL BACK TO RANDOM (%s) — this step is NOT from PPO. Running total: %d real, %d random." % [reason, _real_action_count, _random_fallback_count])
 
-func _on_lines_cleared(line_count: int, combo_count: int, is_tspin:bool) -> void:
+func _on_lines_cleared(line_count: int, combo_count: int, is_tspin: bool) -> void:
 	super._on_lines_cleared(line_count, combo_count, is_tspin)
+	
+	# Proportional rewards for standard line clears
 	match line_count:
-		1: accumulated_reward += 5.0
-		2: accumulated_reward += 15.0
-		3: accumulated_reward += 25.0
+		1: accumulated_reward += 1.0
+		2: accumulated_reward += 3.0
+		3: accumulated_reward += 6.0
 		4: 
-			accumulated_reward += 40.0
+			accumulated_reward += 15.0  # Tetris Quad
 			if b2b_streak > 1:
-				accumulated_reward += float(b2b_streak) * 20.0
-			if prev_metrics.get("holes", 0) > 0:
-				accumulated_reward += 30.0
+				accumulated_reward += float(b2b_streak) * 1.5
 
+	# T-Spin reward
+	if is_tspin:
+		accumulated_reward += 10.0 * float(line_count) 
+		if b2b_streak > 1:
+			accumulated_reward += float(b2b_streak) * 2.0
+
+	# Combo reward
 	if combo_count > 0:
-		accumulated_reward += float(combo_count) * 6.0
+		accumulated_reward += float(combo_count) * 0.5
 
 func _on_garbage_sent(chunks: Array) -> void:
 	for chunk in chunks:
 		var lines: int = int(chunk.get("lines", 0))
-		accumulated_reward += float(lines) * 15.0
+		accumulated_reward += float(lines) * 1.0
 
 func _on_garbage_applied(rows_added: int) -> void:
-	accumulated_reward -= float(rows_added) * 5.0
+	accumulated_reward -= float(rows_added) * 0.5
 
 func _on_game_over() -> void:
 	super._on_game_over()
-	accumulated_reward -= 1000.0
+	accumulated_reward -= game_over_factor
 	step_done = true

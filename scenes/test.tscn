@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b46vsym50goy1"]
 
-[ext_resource type="PackedScene" uid="uid://cowslkaew6qyp" path="res://classes/boards/MultiplayerBoard/MultiplayerBoard.tscn" id="1_bl13t"]
-[ext_resource type="PackedScene" uid="uid://tabidykj4x63" path="res://classes/boards/bots/cloob/CloobBotBoard.tscn" id="2_iyx0m"]
+[ext_resource type="Script" uid="uid://dfy65bdyax7a7" path="res://scenes/test.gd" id="1_iyx0m"]
+[ext_resource type="PackedScene" uid="uid://c2i73eaua1dsq" path="res://classes/boards/bots/HeuristicDataGenerator/HeuristicDataGenerator.tscn" id="2_bl13t"]
 
 [node name="test" type="Control" unique_id=314429075]
 layout_mode = 3
@@ -10,6 +10,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_iyx0m")
+slow_down = true
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=877104747]
 layout_mode = 1
@@ -27,22 +29,20 @@ grow_vertical = 2
 theme_override_constants/separation = 555
 alignment = 1
 
-[node name="MultiplayerBoard" parent="HBoxContainer" unique_id=1821570120 node_paths=PackedStringArray("opponent_board") instance=ExtResource("1_bl13t")]
+[node name="BotBoard1" parent="HBoxContainer" unique_id=582100515 node_paths=PackedStringArray("opponent_board") instance=ExtResource("2_bl13t")]
 layout_mode = 2
-offset_transform_enabled = true
-offset_transform_scale = Vector2(0.75, 0.75)
-DAS_MS = 55.0
-demo_output_dir = "res://demos/"
-player_id = 2
-target_id = 1
-is_battle = true
-opponent_board = NodePath("../CloobBotBoard3")
-
-[node name="CloobBotBoard3" parent="HBoxContainer" unique_id=1254551005 instance=ExtResource("2_iyx0m")]
-layout_mode = 2
-offset_transform_enabled = true
-offset_transform_scale = Vector2(0.75, 0.75)
-lookahead_depth = 1
+move_delay_ms = 1.0
+rotate_delay_ms = 10.0
 player_id = 1
 target_id = 2
 is_battle = true
+opponent_board = NodePath("../BotBoard2")
+
+[node name="BotBoard2" parent="HBoxContainer" unique_id=2022148987 node_paths=PackedStringArray("opponent_board") instance=ExtResource("2_bl13t")]
+layout_mode = 2
+move_delay_ms = 1.0
+rotate_delay_ms = 10.0
+player_id = 2
+target_id = 1
+is_battle = true
+opponent_board = NodePath("../BotBoard1")

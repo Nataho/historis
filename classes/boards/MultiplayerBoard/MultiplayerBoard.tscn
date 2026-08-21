@@ -283,7 +283,6 @@ tile_set = ExtResource("2_5x4f6")
 
 [node name="PlacedTiles" type="TileMapLayer" parent="BoardPivot" unique_id=446647673]
 unique_name_in_owner = true
-tile_map_data = PackedByteArray(0, 0, 252, 255, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 tile_set = ExtResource("2_5x4f6")
 
 [node name="ActivePieceLayer" type="TileMapLayer" parent="BoardPivot" unique_id=569500755]

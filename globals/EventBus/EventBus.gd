@@ -4,6 +4,7 @@ extends Node
 signal lines_cleared(line_count: int, combo_count: int)
 signal score_updated(new_score: int, added_points: int)
 signal level_updated(new_level: int)
+signal player_topped_out(player_id: int, last_attacker_id: int)
 signal game_started
 signal game_over
 

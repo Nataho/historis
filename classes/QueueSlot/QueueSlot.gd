@@ -12,6 +12,11 @@ func render_ascii_piece(ascii_grid: Array, piece_tile_index: int = 0) -> void:
 	tile_index = piece_tile_index
 	queue_redraw()
 
+func clear() -> void:
+	current_grid = []
+	tile_index = 0
+	queue_redraw()
+
 func _draw() -> void:
 	if current_grid.is_empty() or not tile_texture or atlas_columns <= 0:
 		return
