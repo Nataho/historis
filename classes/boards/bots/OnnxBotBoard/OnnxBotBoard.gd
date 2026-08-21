@@ -23,6 +23,7 @@ var _x_tally: Dictionary = {}
 var _hold_true_count: int = 0
 var _hold_false_count: int = 0
 const _TALLY_SUMMARY_INTERVAL: int = 50
+var last_action_was_snapped: bool = false
 
 func _ready() -> void:
 	super._ready()
@@ -179,6 +180,8 @@ func execute_action(action: Dictionary) -> void:
 	var kick_table: Dictionary = pieces_controller.get_kick_table(p_type) if pieces_controller != null else {}
 	var offsets: Array[Vector2i] = pieces_controller.get_state_offsets(p_type, target_rot) if pieces_controller != null else []
 	var drop_y: int = bot._get_drop_y_raw(engine.grid, engine.width, engine.height, offsets, target_x)
+
+	last_action_was_snapped = (drop_y == -1 and not offsets.is_empty())
 
 	# If target_x is out of bounds or blocked for this rotation, find closest valid column
 	if drop_y == -1 and not offsets.is_empty():

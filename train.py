@@ -3,6 +3,7 @@ Tetris VS-Bot PPO Training Server (Always-On High Score Tracking)
 ========================================================================
 """
 
+import argparse
 import os
 import json
 import socket
@@ -26,8 +27,20 @@ warnings.filterwarnings("ignore", category=UserWarning)
 HOST = "127.0.0.1"
 PORT = 11000
 
-# Device selection: automatically detect CUDA GPU vs CPU
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+def get_device(requested: str = "auto") -> tuple[str, str]:
+    if requested == "cuda" or (requested == "auto" and torch.cuda.is_available()):
+        if torch.cuda.is_available():
+            dev_name = torch.cuda.get_device_name(0)
+            return "cuda", f"GPU / CUDA ({dev_name})"
+        else:
+            log("⚠️  CUDA requested but not available. Falling back to CPU.")
+
+    # CPU mode: multi-threaded optimization
+    threads = min(8, os.cpu_count() or 4)
+    torch.set_num_threads(threads)
+    return "cpu", f"CPU ({threads} threads / {os.cpu_count()} logical cores)"
+
+DEVICE, DEVICE_LABEL = get_device("auto")
 
 OBS_SIZE = 413
 HEADER_SIZE = 8
@@ -47,6 +60,8 @@ COLOR_RESET = "\033[0m"
 COLOR_BLUE = "\033[94m"
 COLOR_GREEN = "\033[92m"
 COLOR_YELLOW_BOLD = "\033[1;93m"  # Fixed ANSI syntax
+
+REWARD_SCALE = 0.1                 # Scales reward for Critic stability (avoids Value Loss explosion)
 
 # --- Logging & Export Knobs -------------------------------------------
 N_STEPS = 1024                       # Increased for GPU throughput
@@ -155,10 +170,13 @@ class TetrisVecEnv(VecEnv):
 
     def _recv_packet(self, idx: int):
         header = self._recv_exact(idx, HEADER_SIZE)
-        reward, done_flag = struct.unpack("<fi", header)
+        raw_reward, done_flag = struct.unpack("<fi", header)
         obs_bytes = self._recv_exact(idx, OBS_BYTES)
         obs = np.frombuffer(obs_bytes, dtype=np.float32).copy()
-        return float(reward), bool(done_flag), obs
+        
+        # Scaled reward for Critic stability (100x lower Value MSE loss)
+        ppo_reward = float(raw_reward) * REWARD_SCALE
+        return ppo_reward, bool(done_flag), obs, float(raw_reward)
 
     def _send_action(self, idx: int, action_idx: int) -> None:
         self.conns[idx].sendall(struct.pack("<i", int(action_idx)))
@@ -171,7 +189,7 @@ class TetrisVecEnv(VecEnv):
                 self._pending_reset_obs[i] = None
             else:
                 log(f"[env {i}] reset(): waiting for initial board packet...")
-                _, _, obs = self._recv_packet(i)
+                _, _, obs, _ = self._recv_packet(i)
             self._episode_count[i] += 1
             self._episode_reward[i] = 0.0
             self._episode_steps[i] = 0
@@ -186,19 +204,19 @@ class TetrisVecEnv(VecEnv):
     def step_wait(self):
         obs_list, reward_list, done_list, infos = [], [], [], []
         for i in range(self.num_envs):
-            reward, done, obs = self._recv_packet(i)
+            reward, done, obs, raw_reward = self._recv_packet(i)
             self._global_step += 1
             self._episode_steps[i] += 1
-            self._episode_reward[i] += reward
+            self._episode_reward[i] += raw_reward
 
             info = {}
 
             if SHOW_STEP_LOGS:
-                if not LOG_ONLY_NONZERO_STEPS or reward != 0.0:
+                if not LOG_ONLY_NONZERO_STEPS or raw_reward != 0.0:
                     log(
                         f"[env {i}] step(global={self._global_step}) "
                         f"ep={self._episode_count[i]} ep_step={self._episode_steps[i]:>4} "
-                        f"action={int(self._actions[i]):>2} reward={reward:+7.1f} done={int(done)}"
+                        f"action={int(self._actions[i]):>2} reward={raw_reward:+7.1f} done={int(done)}"
                     )
 
             if done:
@@ -226,7 +244,7 @@ class TetrisVecEnv(VecEnv):
                 info["episode"] = {"r": ep_reward, "l": ep_steps}
                 info["terminal_observation"] = obs
                 self._send_action(i, 0)
-                _, _, next_obs = self._recv_packet(i)
+                _, _, next_obs, _ = self._recv_packet(i)
                 obs = next_obs
                 self._episode_count[i] += 1
                 self._episode_reward[i] = 0.0
@@ -359,9 +377,16 @@ class CheckpointAndExportCallback(BaseCallback):
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Tetris PPO Training Server")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cuda", "cpu"], help="Compute device (auto/cuda/cpu)")
+    parser.add_argument("--reset-to-bc", action="store_true", help="Force starting fresh from Behavior Cloned (BC) weights")
+    args = parser.parse_args()
+
+    dev, dev_label = get_device(args.device)
+
     print("=" * 60)
     print("🤖 PPO Training Server (Always-On High Score Tracking)")
-    print(f"   Device selected: {DEVICE.upper()}")
+    print(f"   Device selected: {dev_label}")
     print(f"   Episode Log Cutoff: > {MIN_EPISODE_REWARD_TO_LOG} (New High Scores Always Print)")
     print(f"   Show Step Logs: {SHOW_STEP_LOGS}")
     print(f"   Silent Runtime Exports: {SILENT_CHECKPOINTS}")
@@ -370,16 +395,42 @@ def main() -> None:
     env = TetrisVecEnv(HOST, PORT)
     num_envs = env.num_envs
 
-    if os.path.exists(CHECKPOINT_PATH):
+    custom_hyperparams = {
+        "ent_coef": 0.001,
+        "learning_rate": 5e-5,
+        "gamma": 0.99,
+        "n_epochs": 4,
+        "target_kl": 0.02,
+        "max_grad_norm": 0.5,
+    }
+
+    if args.reset_to_bc and os.path.exists(CHECKPOINT_PATH):
+        backup_path = os.path.join(MODEL_DIR, "tetris_ppo_stuck_backup.zip")
+        try:
+            os.replace(CHECKPOINT_PATH, backup_path)
+            log(f"📦 Archived previous RL checkpoint to {backup_path}")
+        except Exception:
+            pass
+
+    if os.path.exists(CHECKPOINT_PATH) and not args.reset_to_bc:
         log("↻ Resuming from existing checkpoint...")
-        model = PPO.load(CHECKPOINT_PATH, env=env, device=DEVICE, tensorboard_log=TENSORBOARD_DIR)
+        model = PPO.load(
+            CHECKPOINT_PATH,
+            env=env,
+            device=dev,
+            custom_objects=custom_hyperparams,
+            tensorboard_log=TENSORBOARD_DIR,
+        )
     elif os.path.exists(BC_CHECKPOINT_PATH):
-        log(f"🧑‍🏫 No RL checkpoint yet, but found a behavior-cloned headstart at {BC_CHECKPOINT_PATH}.")
-        log("   Starting PPO from those pretrained weights instead of a random init.")
-        model = PPO.load(BC_CHECKPOINT_PATH, env=env, device=DEVICE, tensorboard_log=TENSORBOARD_DIR)
-        # This is the start of a fresh RL run, not a resume — reset SB3's
-        # internal step counter so logging/tensorboard starts at 0 instead
-        # of wherever the BC "training" (which never called .learn()) left it.
+        log(f"🧑‍🏫 Found Behavior-Cloned headstart at {BC_CHECKPOINT_PATH}.")
+        log("   Starting PPO fine-tuning with target_kl=0.02, n_epochs=4, and ent_coef=0.001 (skills preserved!)")
+        model = PPO.load(
+            BC_CHECKPOINT_PATH,
+            env=env,
+            device=dev,
+            custom_objects=custom_hyperparams,
+            tensorboard_log=TENSORBOARD_DIR,
+        )
         model.num_timesteps = 0
     else:
         log("Creating a fresh PPO model (no checkpoint found).")
@@ -390,13 +441,16 @@ def main() -> None:
         model = PPO(
             "MlpPolicy",
             env,
-            device=DEVICE,
+            device=dev,
             verbose=1,
             n_steps=N_STEPS,
             batch_size=min(512, N_STEPS * num_envs),
-            learning_rate=1e-4,
+            learning_rate=5e-5,
             gamma=0.99,
             ent_coef=0.001,
+            n_epochs=4,
+            target_kl=0.02,
+            max_grad_norm=0.5,
             policy_kwargs=policy_kwargs,
             tensorboard_log=TENSORBOARD_DIR,
         )
@@ -419,7 +473,6 @@ def main() -> None:
         except Exception:
             traceback.print_exc()
         env.close()
-
 
 if __name__ == "__main__":
     main()

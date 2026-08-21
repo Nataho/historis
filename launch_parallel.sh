@@ -6,12 +6,13 @@ SCENE_PATH="res://classes/boards/bots/TrainingBotBoard/TrainingBotBoard.tscn"
 
 NUM_ENVS="${1:-14}"
 PORT="${2:-11000}"
+RULESET="${3:-survival}"
 
-echo "Launching $NUM_ENVS silent headless Godot instance(s) targeting port $PORT..."
+echo "Launching $NUM_ENVS silent headless Godot instance(s) targeting port $PORT (ruleset: $RULESET)..."
 
 PIDS=()
 for i in $(seq 1 $NUM_ENVS); do
-    "$GODOT_BIN" --path "$PROJECT_PATH" --headless --quiet "$SCENE_PATH" -- --port="$PORT" > /dev/null 2>&1 &
+    "$GODOT_BIN" --path "$PROJECT_PATH" --headless --quiet "$SCENE_PATH" -- --port="$PORT" --ruleset="$RULESET" > /dev/null 2>&1 &
     PIDS+=($!)
 done
 

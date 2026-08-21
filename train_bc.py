@@ -1,3 +1,4 @@
+import argparse
 import glob
 import os
 import time
@@ -9,10 +10,20 @@ from gymnasium import spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-# --- CPU OPTIMIZATION CONFIG ---
-DEVICE = "cpu"
-# Set PyTorch to match the 4 physical cores of the i5-10210U
-torch.set_num_threads(4)
+def get_device(requested: str = "auto") -> tuple[str, str]:
+    if requested == "cuda" or (requested == "auto" and torch.cuda.is_available()):
+        if torch.cuda.is_available():
+            dev_name = torch.cuda.get_device_name(0)
+            return "cuda", f"GPU / CUDA ({dev_name})"
+        else:
+            log("⚠️  CUDA requested but not available. Falling back to CPU.")
+
+    # CPU mode: multi-threaded optimization
+    threads = min(8, os.cpu_count() or 4)
+    torch.set_num_threads(threads)
+    return "cpu", f"CPU ({threads} threads / {os.cpu_count()} logical cores)"
+
+DEVICE, DEVICE_LABEL = get_device("auto")
 
 OBS_SIZE = 413
 OBS_BYTES = OBS_SIZE * 4
@@ -25,9 +36,9 @@ BC_CHECKPOINT_PATH = os.path.join(MODEL_DIR, "tetris_bot_bc.zip")
 BC_TEST_ONNX_PATH = os.path.join(MODEL_DIR, "tetris_bot_bc_test.onnx")
 
 EPOCHS = 1000
-BATCH_SIZE = 128       # Optimized for 6MB CPU L3 cache
-LEARNING_RATE = 3e-4   # Balanced LR for CPU batches
-PATIENCE = 25          # Early stopping limit
+BATCH_SIZE = 128
+LEARNING_RATE = 3e-4
+PATIENCE = 25
 VAL_SPLIT = 0.1
 
 
@@ -37,7 +48,7 @@ def log(msg: str) -> None:
 
 
 def load_demo_dataset(demo_dir: str):
-    files = sorted(glob.glob(os.path.join(demo_dir, "*.bin")))
+    files = sorted(glob.glob(os.path.join(demo_dir, "**/*.bin"), recursive=True))
     if not files:
         raise FileNotFoundError(f"No .bin demo files found in '{demo_dir}/'.")
 
@@ -47,28 +58,36 @@ def load_demo_dataset(demo_dir: str):
     ])
 
     obs_list, action_list = [], []
+    skipped_legacy, skipped_bad = 0, 0
     for path in files:
         with open(path, "rb") as f:
             data = f.read()
-            
-        n_samples = len(data) // SAMPLE_BYTES
-        if n_samples == 0:
+
+        # Reject empty files or files not strictly aligned to current OBS_SIZE (1656 bytes/sample)
+        if len(data) == 0 or len(data) % SAMPLE_BYTES != 0:
+            skipped_legacy += 1
             continue
-            
+
         # Fast vectorized byte parsing without Python loops
-        samples = np.frombuffer(data[:n_samples * SAMPLE_BYTES], dtype=sample_dtype)
+        samples = np.frombuffer(data, dtype=sample_dtype)
+        actions = samples['action']
+
+        bad = (actions < 0) | (actions >= ACTION_SPACE_SIZE)
+        if bad.any():
+            skipped_bad += 1
+            continue
+
         obs_list.append(samples['obs'])
-        action_list.append(samples['action'])
-        log(f"  loaded {n_samples} samples from {path}")
+        action_list.append(actions)
+        log(f"  loaded {len(samples)} samples from {path}")
+
+    if not obs_list:
+        raise ValueError(f"No valid demo samples matching OBS_SIZE={OBS_SIZE} found in '{demo_dir}/'.")
 
     obs_arr = np.concatenate(obs_list, axis=0)
     action_arr = np.concatenate(action_list, axis=0).astype(np.int64)
 
-    bad = (action_arr < 0) | (action_arr >= ACTION_SPACE_SIZE)
-    if bad.any():
-        raise ValueError(f"Recorded actions outside valid range 0..{ACTION_SPACE_SIZE - 1}")
-
-    log(f"Total demo samples: {len(action_arr)} from {len(files)} file(s)")
+    log(f"Total valid demo samples: {len(action_arr)} from {len(obs_list)} valid file(s) (skipped {skipped_legacy} legacy files)")
     return obs_arr, action_arr
 
 
@@ -197,9 +216,16 @@ def train_behavior_cloning(model: PPO, obs_arr: np.ndarray, action_arr: np.ndarr
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Tetris Behavior Cloning Pretrainer")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cuda", "cpu"], help="Compute device (auto/cuda/cpu)")
+    args = parser.parse_args()
+
+    dev, dev_label = get_device(args.device)
+
     print("=" * 60)
-    print("🧑‍🏫 Behavior Cloning Pretrainer (CPU Mode - Intel i5 Optimizations)")
-    print(f"   Threads: {torch.get_num_threads()} | Batch Size: {BATCH_SIZE}")
+    print("🧑‍🏫 Behavior Cloning Pretrainer")
+    print(f"   Device selected: {dev_label}")
+    print(f"   Batch Size: {BATCH_SIZE}")
     print("=" * 60)
 
     obs_arr, action_arr = load_demo_dataset(DEMO_DIR)
@@ -209,7 +235,7 @@ def main() -> None:
         activation_fn=torch.nn.ReLU,
     )
     dummy_env = DummyVecEnv([lambda: _DummySpaceEnv()])
-    model = PPO("MlpPolicy", dummy_env, device=DEVICE, policy_kwargs=policy_kwargs, verbose=0)
+    model = PPO("MlpPolicy", dummy_env, device=dev, policy_kwargs=policy_kwargs, verbose=0)
 
     train_behavior_cloning(model, obs_arr, action_arr)
 
