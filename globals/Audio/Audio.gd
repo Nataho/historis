@@ -62,6 +62,7 @@ func _enter_tree() -> void:
 	}
 
 	_music = {
+		"menu_loop": [preload("uid://c1hsx4s22yct8"), 0]
 		
 	}
 
@@ -84,7 +85,7 @@ func play_sound(sound_key: String, offset: float = 0) -> void:
 	await sfx.finished
 	sfx.queue_free()
 
-func play_music(music_key: String, end_effect: SOUND_END_EFFECTS, start_effect: SOUND_START_EFFECTS) -> void:
+func play_music(music_key: String, end_effect: SOUND_END_EFFECTS = SOUND_END_EFFECTS.NONE, start_effect: SOUND_START_EFFECTS = SOUND_START_EFFECTS.NONE) -> void:
 	music_player_node.bus = &"Music"
 	if not _music.has(music_key):
 		push_error("The sound key is not found in the dictionary: ", music_key)

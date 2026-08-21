@@ -23,6 +23,7 @@ buses/default_bus_layout="uid://c8w1uk642v6bk"
 
 EventBus="*uid://b7717e526xhlu"
 Audio="*uid://bcg1r3nox5881"
+Palette="*uid://dxbk55qrbklye"
 
 [display]
 

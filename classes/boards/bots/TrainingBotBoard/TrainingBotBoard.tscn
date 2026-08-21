@@ -158,6 +158,15 @@ outline_color = Color(0.37027243, 0.61445385, 1.92523e-07, 1)
 stacked_outline_count = 1
 stacked_outline_0/size = 10
 
+[sub_resource type="LabelSettings" id="LabelSettings_32lhq"]
+font = ExtResource("3_g6hj4")
+font_size = 40
+font_color = Color(1, 0.7254902, 0, 1)
+outline_size = 10
+outline_color = Color(1, 1, 0, 1)
+stacked_outline_count = 1
+stacked_outline_0/size = 20
+
 [node name="TrainingBotBoard" type="Control" unique_id=2053670422]
 layout_mode = 3
 anchors_preset = 15
@@ -167,7 +176,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_d5hkn")
 
-[node name="BoardPivot" type="Control" parent="." unique_id=343946656]
+[node name="BoardPivot" type="Control" parent="." unique_id=1379325006]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -178,12 +187,12 @@ grow_horizontal = 2
 grow_vertical = 2
 scale = Vector2(0.5, 0.5)
 
-[node name="anim" type="AnimationPlayer" parent="BoardPivot" unique_id=672783464]
+[node name="anim" type="AnimationPlayer" parent="BoardPivot" unique_id=1581276002]
 unique_name_in_owner = true
 root_node = NodePath("../AnimationPivot")
 libraries/ = SubResource("AnimationLibrary_cxe4u")
 
-[node name="BG" type="Panel" parent="BoardPivot" unique_id=162332267]
+[node name="BG" type="Panel" parent="BoardPivot" unique_id=1537403378]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -199,7 +208,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_3liot")
 
-[node name="Garbage_Meter" type="Panel" parent="BoardPivot" unique_id=44450416]
+[node name="Garbage_Meter" type="Panel" parent="BoardPivot" unique_id=1043751716]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -215,7 +224,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fo5xl")
 
-[node name="Meter" type="Panel" parent="BoardPivot/Garbage_Meter" unique_id=355125525]
+[node name="Meter" type="Panel" parent="BoardPivot/Garbage_Meter" unique_id=300922417]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -231,25 +240,25 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_cxe4u")
 
-[node name="GridBackground" type="TileMapLayer" parent="BoardPivot" unique_id=1348566571]
+[node name="GridBackground" type="TileMapLayer" parent="BoardPivot" unique_id=954206732]
 unique_name_in_owner = true
 tile_set = ExtResource("2_qtbu0")
 
-[node name="PlacedTiles" type="TileMapLayer" parent="BoardPivot" unique_id=953069643]
+[node name="PlacedTiles" type="TileMapLayer" parent="BoardPivot" unique_id=1711596487]
 unique_name_in_owner = true
 tile_map_data = PackedByteArray(0, 0, 252, 255, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 tile_set = ExtResource("2_qtbu0")
 
-[node name="ActivePieceLayer" type="TileMapLayer" parent="BoardPivot" unique_id=1151420658]
+[node name="ActivePieceLayer" type="TileMapLayer" parent="BoardPivot" unique_id=2021921913]
 unique_name_in_owner = true
 tile_set = ExtResource("2_qtbu0")
 
-[node name="GhostPieceLayer" type="TileMapLayer" parent="BoardPivot" unique_id=587410831]
+[node name="GhostPieceLayer" type="TileMapLayer" parent="BoardPivot" unique_id=1676326145]
 unique_name_in_owner = true
 self_modulate = Color(1, 1, 1, 0.39215687)
 tile_set = ExtResource("2_qtbu0")
 
-[node name="AnimationPivot" type="Control" parent="BoardPivot" unique_id=692610174]
+[node name="AnimationPivot" type="Control" parent="BoardPivot" unique_id=815317547]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -259,7 +268,7 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="tick" type="Label" parent="BoardPivot/AnimationPivot" unique_id=281378728]
+[node name="tick" type="Label" parent="BoardPivot/AnimationPivot" unique_id=1365552249]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -278,7 +287,7 @@ label_settings = SubResource("LabelSettings_vxpyd")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HoldSlot" type="Control" parent="BoardPivot" unique_id=686229038]
+[node name="HoldSlot" type="Control" parent="BoardPivot" unique_id=428931723]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 100)
 anchors_preset = 0
@@ -288,7 +297,7 @@ offset_right = -176.0
 offset_bottom = -150.0
 script = ExtResource("4_xyfnp")
 
-[node name="bg" type="Panel" parent="BoardPivot/HoldSlot" unique_id=4311857]
+[node name="bg" type="Panel" parent="BoardPivot/HoldSlot" unique_id=901455278]
 z_index = -1
 layout_mode = 1
 anchors_preset = 15
@@ -298,7 +307,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kbx6l")
 
-[node name="Queue_pivot" type="Control" parent="BoardPivot" unique_id=1935943741]
+[node name="Queue_pivot" type="Control" parent="BoardPivot" unique_id=1424752140]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -312,7 +321,7 @@ offset_bottom = 176.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Queue" type="VBoxContainer" parent="BoardPivot/Queue_pivot" unique_id=1465492235]
+[node name="Queue" type="VBoxContainer" parent="BoardPivot/Queue_pivot" unique_id=340823615]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -333,13 +342,13 @@ alignment = 1
 script = ExtResource("5_o11rq")
 tile_texture = ExtResource("6_mkhmg")
 
-[node name="q1" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1754848695]
+[node name="q1" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=685023925]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 script = ExtResource("4_xyfnp")
 tile_texture = ExtResource("6_mkhmg")
 
-[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q1" unique_id=1032275210]
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q1" unique_id=1212662231]
 z_index = -1
 layout_mode = 1
 anchors_preset = 15
@@ -349,14 +358,14 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kbx6l")
 
-[node name="q2" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1198153899]
+[node name="q2" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1048921363]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 offset_transform_scale = Vector2(0.9, 0.9)
 script = ExtResource("4_xyfnp")
 tile_texture = ExtResource("6_mkhmg")
 
-[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q2" unique_id=1491732461]
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q2" unique_id=1886774979]
 z_index = -1
 layout_mode = 1
 anchors_preset = 15
@@ -366,14 +375,14 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kbx6l")
 
-[node name="q3" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1189758288]
+[node name="q3" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1762349159]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 offset_transform_scale = Vector2(0.8, 0.8)
 script = ExtResource("4_xyfnp")
 tile_texture = ExtResource("6_mkhmg")
 
-[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q3" unique_id=202525197]
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q3" unique_id=909945057]
 z_index = -1
 layout_mode = 1
 anchors_preset = 15
@@ -383,14 +392,14 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kbx6l")
 
-[node name="q4" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1792388143]
+[node name="q4" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=355819512]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 offset_transform_scale = Vector2(0.7, 0.7)
 script = ExtResource("4_xyfnp")
 tile_texture = ExtResource("6_mkhmg")
 
-[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q4" unique_id=1883915558]
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q4" unique_id=1496335093]
 z_index = -1
 layout_mode = 1
 anchors_preset = 15
@@ -400,14 +409,14 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kbx6l")
 
-[node name="q5" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=1421587348]
+[node name="q5" type="Control" parent="BoardPivot/Queue_pivot/Queue" unique_id=953907508]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 offset_transform_scale = Vector2(0.6, 0.6)
 script = ExtResource("4_xyfnp")
 tile_texture = ExtResource("6_mkhmg")
 
-[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q5" unique_id=1854577818]
+[node name="bg" type="Panel" parent="BoardPivot/Queue_pivot/Queue/q5" unique_id=1513989517]
 z_index = -1
 layout_mode = 1
 anchors_preset = 15
@@ -417,7 +426,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kbx6l")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="BoardPivot" unique_id=926794449]
+[node name="VBoxContainer" type="VBoxContainer" parent="BoardPivot" unique_id=479922075]
 layout_mode = 1
 anchors_preset = 6
 anchor_left = 1.0
@@ -431,7 +440,7 @@ offset_bottom = 26.0
 grow_horizontal = 0
 grow_vertical = 2
 
-[node name="KOs" type="Label" parent="BoardPivot/VBoxContainer" unique_id=1013877016]
+[node name="KOs" type="Label" parent="BoardPivot/VBoxContainer" unique_id=1917394444]
 unique_name_in_owner = true
 layout_mode = 2
 text = "1 KOS"
@@ -439,7 +448,7 @@ label_settings = SubResource("LabelSettings_3liot")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="b2b" type="Label" parent="BoardPivot/VBoxContainer" unique_id=1383196903]
+[node name="b2b" type="Label" parent="BoardPivot/VBoxContainer" unique_id=2094633873]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Back-To-Back"
@@ -447,7 +456,7 @@ label_settings = SubResource("LabelSettings_ptd2l")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="spin" type="Label" parent="BoardPivot/VBoxContainer" unique_id=1284987528]
+[node name="spin" type="Label" parent="BoardPivot/VBoxContainer" unique_id=1550304354]
 unique_name_in_owner = true
 layout_mode = 2
 offset_transform_enabled = true
@@ -457,7 +466,7 @@ label_settings = SubResource("LabelSettings_cxe4u")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="clear" type="Label" parent="BoardPivot/VBoxContainer" unique_id=566267946]
+[node name="clear" type="Label" parent="BoardPivot/VBoxContainer" unique_id=441653390]
 unique_name_in_owner = true
 layout_mode = 2
 offset_transform_enabled = true
@@ -467,10 +476,25 @@ label_settings = SubResource("LabelSettings_iagev")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="combo" type="Label" parent="BoardPivot/VBoxContainer" unique_id=1819427448]
+[node name="combo" type="Label" parent="BoardPivot/VBoxContainer" unique_id=32319339]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Combo"
 label_settings = SubResource("LabelSettings_fo5xl")
 horizontal_alignment = 2
 vertical_alignment = 1
+
+[node name="lines_cleared" type="Label" parent="BoardPivot" unique_id=30541154]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 172.0
+offset_top = 188.0
+offset_right = 226.0
+offset_bottom = 246.0
+grow_horizontal = 2
+text = "0"
+label_settings = SubResource("LabelSettings_32lhq")
+horizontal_alignment = 1

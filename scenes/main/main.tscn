@@ -1,5 +1,52 @@
 [gd_scene format=3 uid="uid://cgbpcvveayk8"]
 
+[ext_resource type="FontFile" uid="uid://cm0kofx4wpdln" path="res://assets/fonts/KRKZ Blockes 2(2).ttf" id="1_hyk8p"]
+[ext_resource type="Script" uid="uid://53a1l3s5gc2f" path="res://scenes/main/main.gd" id="1_iuonh"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_vxpyd"]
+font = ExtResource("1_hyk8p")
+font_size = 115
+outline_size = 40
+outline_color = Color(0.47007585, 0.47007585, 0.47007585, 1)
+stacked_outline_count = 1
+stacked_outline_0/size = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_iuonh"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0.7176471, 0.8039216, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_k2fmo"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.8745098, 0.1882353, 0.10980392, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l3cfh"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 0.5686275, 0, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [node name="Main" type="Control" unique_id=967666672]
 layout_mode = 3
 anchors_preset = 15
@@ -7,3 +54,91 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_iuonh")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1717855432]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0.94509804, 0.81960785, 1)
+
+[node name="Label" type="Label" parent="." unique_id=758231292]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -192.0
+offset_top = 39.0
+offset_right = 192.0
+offset_bottom = 140.0
+grow_horizontal = 2
+text = "HISTORIS"
+label_settings = SubResource("LabelSettings_vxpyd")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1905310828]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -225.0
+offset_top = -62.0
+offset_right = 225.0
+offset_bottom = 226.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="singleplayer" type="Button" parent="VBoxContainer" unique_id=1661898630]
+custom_minimum_size = Vector2(0, 68.575)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("1_hyk8p")
+theme_override_font_sizes/font_size = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
+theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
+text = "singleplayer"
+
+[node name="multiplayer" type="Button" parent="VBoxContainer" unique_id=1246076294]
+custom_minimum_size = Vector2(0, 68.575)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("1_hyk8p")
+theme_override_font_sizes/font_size = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
+theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
+text = "Multiplayer"
+
+[node name="settings" type="Button" parent="VBoxContainer" unique_id=1862161606]
+custom_minimum_size = Vector2(0, 68.575)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("1_hyk8p")
+theme_override_font_sizes/font_size = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
+theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
+text = "settings"
+
+[node name="exit" type="Button" parent="VBoxContainer" unique_id=830644565]
+custom_minimum_size = Vector2(0, 68.575)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("1_hyk8p")
+theme_override_font_sizes/font_size = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
+theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
+text = "exit"
+
+[connection signal="pressed" from="VBoxContainer/exit" to="." method="exit"]

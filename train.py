@@ -396,7 +396,7 @@ def main() -> None:
     num_envs = env.num_envs
 
     custom_hyperparams = {
-        "ent_coef": 0.001,
+        "ent_coef": 0.005,
         "learning_rate": 5e-5,
         "gamma": 0.99,
         "n_epochs": 4,

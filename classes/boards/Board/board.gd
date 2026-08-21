@@ -33,7 +33,9 @@ var GRID_OFFSET := Vector2i(-BOARD_SIZE.x / 2, -BOARD_SIZE.y / 2)
 @onready var clear_label: Label = %clear
 @onready var combo_label: Label = %combo
 @onready var b2b_label: Label = %b2b
+@onready var lines_cleared_label: Label = %lines_cleared
 
+var lines_cleared = 0
 
 var engine: TetrisEngine 
 var pieces_controller: PiecesController
@@ -417,6 +419,8 @@ func _on_lines_cleared(line_count: int, combo_count: int, is_tspin:bool) -> void
 		b2b_streak += 1
 	elif line_count > 0:
 		b2b_streak = 0
+	
+	lines_cleared += line_count
 	_update_clear_message(line_count, combo_count, is_tspin)
 
 func _update_clear_message(line_count:int, combo_count:int, is_tspin:bool):
@@ -434,7 +438,7 @@ func _update_clear_message(line_count:int, combo_count:int, is_tspin:bool):
 	spin_label.text = spin_message
 	clear_label.text = clear_message
 	combo_label.text = combo_message
-	
+	lines_cleared_label.text = str(lines_cleared)
 func _update_knockouts():
 	kos_label.text = str(knockouts) + " KOs" if knockouts > 0 else ""
 
