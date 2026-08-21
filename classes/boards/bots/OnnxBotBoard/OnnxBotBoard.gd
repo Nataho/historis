@@ -24,6 +24,9 @@ var _hold_true_count: int = 0
 var _hold_false_count: int = 0
 const _TALLY_SUMMARY_INTERVAL: int = 50
 var last_action_was_snapped: bool = false
+var last_action_used_soft_drop: bool = false
+var last_action_used_hold: bool = false
+var last_drop_distance: int = 0
 
 func _ready() -> void:
 	super._ready()
@@ -167,6 +170,8 @@ func execute_action(action: Dictionary) -> void:
 	var target_rot: int = action.get("target_rot", 0)
 	var target_x: int = action.get("target_x", 3)
 	var use_hold: bool = action.get("use_hold", false)
+	last_action_used_hold = use_hold
+	last_action_used_soft_drop = false
 
 	# 1. Hold Piece
 	if use_hold and engine.can_hold:
@@ -176,6 +181,7 @@ func execute_action(action: Dictionary) -> void:
 		if engine.active_piece_type.is_empty():
 			return
 
+	var start_y: int = engine.active_pos.y
 	var p_type: String = engine.active_piece_type
 	var kick_table: Dictionary = pieces_controller.get_kick_table(p_type) if pieces_controller != null else {}
 	var offsets: Array[Vector2i] = pieces_controller.get_state_offsets(p_type, target_rot) if pieces_controller != null else []
@@ -207,6 +213,7 @@ func execute_action(action: Dictionary) -> void:
 		if reach_info.get("reachable", false) and not reach_info.get("path", []).is_empty():
 			var path: Array = reach_info["path"]
 			var req_soft_drop: bool = reach_info.get("requires_soft_drop", false) or target_pos.y != drop_y
+			last_action_used_soft_drop = req_soft_drop
 
 			for node: Vector3i in path:
 				# Step rotation respecting SRS (CW, CCW, or 180)
@@ -230,6 +237,7 @@ func execute_action(action: Dictionary) -> void:
 							await get_tree().create_timer(drop_delay_sec).timeout
 
 			engine.hard_drop()
+			last_drop_distance = max(0, engine.active_pos.y - start_y)
 			return
 
 	# Fallback: SRS Placement
@@ -251,6 +259,7 @@ func execute_action(action: Dictionary) -> void:
 		await get_tree().create_timer(drop_delay_sec).timeout
 
 	engine.hard_drop()
+	last_drop_distance = max(0, engine.active_pos.y - start_y)
 
 func _on_game_over() -> void:
 	b2b_streak = 0

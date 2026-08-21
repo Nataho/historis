@@ -31,6 +31,8 @@ enum RulesetPreset {
 @export_group("Survival & Stack Height Rules")
 @export var step_survival_reward: float = 1.0
 @export var invalid_action_penalty: float = 1.0 ## Penalizes out-of-bounds column selections that had to be snapped
+@export var hard_drop_tile_reward: float = 0.02 ## Reward per vertical tile dropped (covers stack depth)
+@export var soft_drop_tile_multiplier: float = 0.5 ## Half reward per tile if soft drop path was required
 @export var low_stack_bonus: float = 0.25
 @export var safe_stack_height: int = 6
 @export var danger_height_threshold: int = 13
@@ -44,6 +46,7 @@ enum RulesetPreset {
 @export_group("Holes & Buried Air Rules")
 @export var hole_creation_penalty: float = 4.5
 @export var hole_clear_reward: float = 4.5
+@export var soft_drop_hole_clear_multiplier: float = 0.5 ## Receiving half score when filling/clearing holes via soft drops vs hard drops
 @export var covered_blocks_penalty_weight: float = 0.5
 
 @export_group("Surface Flatness Rules")
@@ -426,11 +429,17 @@ func _evaluate_placement_reward(prev: Dictionary, curr: Dictionary) -> void:
 	if last_action_was_snapped:
 		step_score -= invalid_action_penalty
 
+	# Drop Distance / Depth Bonus (more tiles covered from spawn to lock = higher reward)
+	if last_drop_distance > 0 and hard_drop_tile_reward > 0:
+		var drop_mult: float = soft_drop_tile_multiplier if last_action_used_soft_drop else 1.0
+		step_score += float(last_drop_distance) * (hard_drop_tile_reward * drop_mult)
+
 	# 2. Holes penalty / reward: creating holes severely degrades long-term survivability
 	if delta_holes > 0:
 		step_score -= float(delta_holes) * hole_creation_penalty
 	elif delta_holes < 0:
-		step_score += float(abs(delta_holes)) * hole_clear_reward
+		var reward_mult: float = soft_drop_hole_clear_multiplier if last_action_used_soft_drop else 1.0
+		step_score += float(abs(delta_holes)) * (hole_clear_reward * reward_mult)
 
 	# 3. Buried holes penalty (blocks stacked above holes making them harder to clear)
 	if delta_covered > 0:
