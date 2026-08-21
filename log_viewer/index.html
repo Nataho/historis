@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris AI Training Logs Dashboard</title>
+    <!-- Chart.js and FontAwesome -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0c0f17;
+            --bg-card: #151a28;
+            --bg-card-hover: #1c2236;
+            --border-color: #242c44;
+            --text-main: #f0f4fc;
+            --text-muted: #8b9bb4;
+            --accent-cyan: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-green: #00e676;
+            --accent-amber: #ffb703;
+            --accent-red: #ff3366;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Header */
+        header {
+            background: linear-gradient(180deg, rgba(21, 26, 40, 0.95) 0%, rgba(12, 15, 23, 0.9) 100%);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #0c0f17;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+        }
+
+        .brand-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        select {
+            appearance: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 9px 36px 9px 14px;
+            border-radius: 8px;
+            font-family: var(--font-main);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+            max-width: 280px;
+        }
+
+        select:hover, select:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+        }
+
+        .select-arrow {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 230, 118, 0.1);
+            border: 1px solid rgba(0, 230, 118, 0.3);
+            color: var(--accent-green);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 12px var(--accent-green); }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
+
+        /* Main Layout */
+        main {
+            padding: 24px 28px;
+            flex: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Stat Cards Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 242, 254, 0.3);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .stat-card.cyan::before { background: var(--accent-cyan); }
+        .stat-card.purple::before { background: var(--accent-purple); }
+        .stat-card.green::before { background: var(--accent-green); }
+        .stat-card.amber::before { background: var(--accent-amber); }
+        .stat-card.red::before { background: var(--accent-red); }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 26px;
+            font-weight: 700;
+            margin-top: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .stat-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 340px;
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .chart-title {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-tag {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .chart-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Health & Diagnostics Section */
+        .diagnosis-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 22px;
+        }
+
+        .diagnosis-header {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .diagnosis-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+        }
+
+        .diag-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .diag-icon {
+            font-size: 18px;
+            margin-top: 2px;
+        }
+
+        .diag-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .diag-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Data Table */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 380px;
+            margin-top: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            text-align: left;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 10;
+        }
+
+        th {
+            padding: 10px 14px;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: var(--font-main);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-container">
+            <div class="brand-icon">
+                <i class="fa-solid fa-shapes"></i>
+            </div>
+            <div>
+                <div class="brand-title">Tetris AI Live Training Monitor</div>
+                <div class="brand-subtitle" id="lastUpdatedLabel">Connecting to TensorBoard logs...</div>
+            </div>
+        </div>
+
+        <div class="header-controls">
+            <div class="select-wrapper">
+                <select id="runSelect">
+                    <option value="">Loading runs...</option>
+                </select>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+            </div>
+
+            <button class="btn" id="refreshBtn" title="Force Refresh">
+                <i class="fa-solid fa-rotate"></i> Refresh
+            </button>
+
+            <div class="live-badge">
+                <div class="pulse-dot"></div>
+                LIVE AUTO-POLL (5s)
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Top Metrics Stat Cards -->
+        <div class="stats-grid">
+            <div class="stat-card amber">
+                <div class="stat-label">
+                    <span>All-Time High Score</span>
+                    <i class="fa-solid fa-crown" style="color: #ffb703;"></i>
+                </div>
+                <div class="stat-value" id="valHighScore" style="color: #ffb703;">--</div>
+                <div class="stat-sub" id="subHighScore">Stored in ai_models/best_score.json</div>
+            </div>
+
+            <div class="stat-card cyan">
+                <div class="stat-label">
+                    <span>Avg Episode Length</span>
+                    <i class="fa-solid fa-hourglass-half"></i>
+                </div>
+                <div class="stat-value" id="valEpLen">--</div>
+                <div class="stat-sub" id="subEpLen">Target: > 1000 steps</div>
+            </div>
+
+            <div class="stat-card green">
+                <div class="stat-label">
+                    <span>Avg Episode Reward</span>
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div class="stat-value" id="valEpRew">--</div>
+                <div class="stat-sub" id="subEpRew">Includes clear / milestone bonuses</div>
+            </div>
+
+            <div class="stat-card purple">
+                <div class="stat-label">
+                    <span>Policy Entropy</span>
+                    <i class="fa-solid fa-compass"></i>
+                </div>
+                <div class="stat-value" id="valEntropy">--</div>
+                <div class="stat-sub" id="subEntropy">Action exploration level</div>
+            </div>
+
+            <div class="stat-card amber">
+                <div class="stat-label">
+                    <span>Value Loss</span>
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div class="stat-value" id="valLoss">--</div>
+                <div class="stat-sub" id="subLoss">Critic prediction variance</div>
+            </div>
+
+            <div class="stat-card red">
+                <div class="stat-label">
+                    <span>Training Speed</span>
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div class="stat-value" id="valFps">--</div>
+                <div class="stat-sub" id="subFps">Frames Per Second</div>
+            </div>
+        </div>
+
+        <!-- Curriculum Health & Diagnostic Summary -->
+        <div class="diagnosis-card">
+            <div class="diagnosis-header">
+                <i class="fa-solid fa-heart-pulse" style="color: var(--accent-cyan);"></i>
+                Curriculum Stage & AI Health Diagnostic
+            </div>
+            <div class="diagnosis-items" id="diagnosisList">
+                <div class="diag-item">
+                    <div class="diag-icon" style="color: var(--accent-amber);"><i class="fa-solid fa-circle-info"></i></div>
+                    <div>
+                        <div class="diag-title">Analyzing run metrics...</div>
+                        <div class="diag-desc">Fetching live TensorBoard scalar timelines.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-cyan);"></i>
+                        Episode Survival (Steps / Episode)
+                    </div>
+                    <div class="chart-tag">rollout/ep_len_mean</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartEpLen"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <i class="fa-solid fa-award" style="color: var(--accent-green);"></i>
+                        Mean Episode Reward Progression
+                    </div>
+                    <div class="chart-tag">rollout/ep_rew_mean</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartEpRew"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <i class="fa-solid fa-dice" style="color: var(--accent-purple);"></i>
+                        Policy Entropy Loss (Exploration)
+                    </div>
+                    <div class="chart-tag">train/entropy_loss</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartEntropy"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <i class="fa-solid fa-shield-halved" style="color: var(--accent-amber);"></i>
+                        Critic Value Loss & Approx KL
+                    </div>
+                    <div class="chart-tag">train/value_loss & approx_kl</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartValueLoss"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Log Table -->
+        <div class="table-card">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <i class="fa-solid fa-table-list" style="color: var(--accent-cyan);"></i>
+                    Recent Iteration History
+                </div>
+                <div class="chart-tag" id="tableRowCount">0 records</div>
+            </div>
+            <div class="table-wrapper">
+                <table id="metricsTable">
+                    <thead>
+                        <tr>
+                            <th>Step</th>
+                            <th>Avg Steps</th>
+                            <th>Avg Reward</th>
+                            <th>Entropy</th>
+                            <th>Approx KL</th>
+                            <th>Value Loss</th>
+                            <th>Policy Loss</th>
+                            <th>FPS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading telemetry table...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Chart configuration helpers
+        Chart.defaults.color = '#8b9bb4';
+        Chart.defaults.borderColor = '#242c44';
+        Chart.defaults.font.family = "'JetBrains Mono', monospace";
+        Chart.defaults.font.size = 11;
+
+        let charts = {};
+        let currentRunId = null;
+        let autoPollTimer = null;
+
+        function initCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#151a28',
+                        titleColor: '#f0f4fc',
+                        bodyColor: '#f0f4fc',
+                        borderColor: '#242c44',
+                        borderWidth: 1,
+                        padding: 10
+                    }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255, 255, 255, 0.04)' } },
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.04)' } }
+                }
+            };
+
+            // 1. Episode Length
+            charts.epLen = new Chart(document.getElementById('chartEpLen'), {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Avg Steps', data: [], borderColor: '#00f2fe', backgroundColor: 'rgba(0, 242, 254, 0.1)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 2 }] },
+                options: chartOptions
+            });
+
+            // 2. Episode Reward
+            charts.epRew = new Chart(document.getElementById('chartEpRew'), {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Avg Reward', data: [], borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.1)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 2 }] },
+                options: chartOptions
+            });
+
+            // 3. Entropy
+            charts.entropy = new Chart(document.getElementById('chartEntropy'), {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Policy Entropy', data: [], borderColor: '#9d4edd', backgroundColor: 'rgba(157, 78, 221, 0.1)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 2 }] },
+                options: chartOptions
+            });
+
+            // 4. Value Loss & KL
+            charts.valLoss = new Chart(document.getElementById('chartValueLoss'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Value Loss', data: [], borderColor: '#ffb703', yAxisID: 'y', tension: 0.3, borderWidth: 2, pointRadius: 2 },
+                        { label: 'Approx KL', data: [], borderColor: '#ff3366', yAxisID: 'y1', tension: 0.3, borderWidth: 2, pointRadius: 2 }
+                    ]
+                },
+                options: {
+                    ...chartOptions,
+                    plugins: { legend: { display: true, position: 'top', align: 'end' } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.04)' } },
+                        y: { type: 'linear', display: true, position: 'left', grid: { color: 'rgba(255, 255, 255, 0.04)' } },
+                        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        async function fetchRuns() {
+            try {
+                const res = await fetch('/api/runs');
+                const data = await res.json();
+                const select = document.getElementById('runSelect');
+                
+                const prevVal = select.value;
+                select.innerHTML = '';
+
+                data.runs.slice().reverse().forEach(run => {
+                    const opt = document.createElement('option');
+                    opt.value = run.id;
+                    opt.textContent = `Run #${run.id + 1} (${run.last_updated}) - ${run.file}`;
+                    select.appendChild(opt);
+                });
+
+                if (currentRunId === null && data.runs.length > 0) {
+                    currentRunId = data.runs[data.runs.length - 1].id;
+                    select.value = currentRunId;
+                } else if (prevVal) {
+                    select.value = prevVal;
+                }
+            } catch (err) {
+                console.error("Error fetching runs list:", err);
+            }
+        }
+
+        async function updateDashboard(runId) {
+            try {
+                const query = runId !== null ? `?id=${runId}` : '';
+                const res = await fetch(`/api/run_details${query}`);
+                if (!res.ok) return;
+                const payload = await res.json();
+
+                const meta = payload.meta;
+                const metrics = payload.metrics;
+
+                document.getElementById('lastUpdatedLabel').textContent = `Log File: ${meta.file} | Updated: ${meta.last_updated} (${meta.size_kb} KB)`;
+
+                const epLens = metrics['rollout/ep_len_mean'] || [];
+                const epRews = metrics['rollout/ep_rew_mean'] || [];
+                const entLosses = metrics['train/entropy_loss'] || [];
+                const vLosses = metrics['train/value_loss'] || [];
+                const klDivs = metrics['train/approx_kl'] || [];
+                const pLosses = metrics['train/policy_gradient_loss'] || [];
+                const fpsVals = metrics['time/fps'] || [];
+
+                // Map by step
+                const stepMap = new Map();
+                function indexMetric(arr, key) {
+                    arr.forEach(item => {
+                        if (!stepMap.has(item.step)) stepMap.set(item.step, {});
+                        stepMap.get(item.step)[key] = item.value;
+                    });
+                }
+
+                indexMetric(epLens, 'ep_len');
+                indexMetric(epRews, 'ep_rew');
+                indexMetric(entLosses, 'entropy_loss');
+                indexMetric(vLosses, 'value_loss');
+                indexMetric(klDivs, 'approx_kl');
+                indexMetric(pLosses, 'policy_loss');
+                indexMetric(fpsVals, 'fps');
+
+                const sortedSteps = Array.from(stepMap.keys()).sort((a, b) => a - b);
+
+                if (sortedSteps.length === 0) {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No completed rollout steps recorded in this event file yet.</td></tr>';
+                    return;
+                }
+
+                // Update Stat Cards with latest values
+                const bestScoreVal = payload.best_score?.high_score !== undefined ? payload.best_score.high_score.toFixed(1) : '--';
+                document.getElementById('valHighScore').textContent = bestScoreVal;
+
+                const latestStep = sortedSteps[sortedSteps.length - 1];
+                const latestData = stepMap.get(latestStep);
+
+                const currLen = latestData.ep_len !== undefined ? latestData.ep_len.toFixed(1) : '--';
+                const currRew = latestData.ep_rew !== undefined ? latestData.ep_rew.toFixed(1) : '--';
+                const currEnt = latestData.entropy_loss !== undefined ? (-latestData.entropy_loss).toFixed(2) : '--';
+                const currVLoss = latestData.value_loss !== undefined ? latestData.value_loss.toFixed(1) : '--';
+                const currFps = latestData.fps !== undefined ? Math.round(latestData.fps) : '--';
+
+                document.getElementById('valEpLen').textContent = currLen;
+                document.getElementById('valEpRew').textContent = currRew;
+                document.getElementById('valEntropy').textContent = currEnt;
+                document.getElementById('valLoss').textContent = currVLoss;
+                document.getElementById('valFps').textContent = currFps;
+
+                // Update Charts
+                const labels = sortedSteps.map(s => s >= 1000000 ? `${(s/1000000).toFixed(2)}M` : `${(s/1000).toFixed(0)}k`);
+                
+                charts.epLen.data.labels = labels;
+                charts.epLen.data.datasets[0].data = sortedSteps.map(s => stepMap.get(s).ep_len ?? null);
+                charts.epLen.update();
+
+                charts.epRew.data.labels = labels;
+                charts.epRew.data.datasets[0].data = sortedSteps.map(s => stepMap.get(s).ep_rew ?? null);
+                charts.epRew.update();
+
+                charts.entropy.data.labels = labels;
+                charts.entropy.data.datasets[0].data = sortedSteps.map(s => {
+                    const e = stepMap.get(s).entropy_loss;
+                    return e !== undefined ? -e : null;
+                });
+                charts.entropy.update();
+
+                charts.valLoss.data.labels = labels;
+                charts.valLoss.data.datasets[0].data = sortedSteps.map(s => stepMap.get(s).value_loss ?? null);
+                charts.valLoss.data.datasets[1].data = sortedSteps.map(s => stepMap.get(s).approx_kl ?? null);
+                charts.valLoss.update();
+
+                // Update Table
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
+                document.getElementById('tableRowCount').textContent = `${sortedSteps.length} iterations`;
+
+                sortedSteps.slice().reverse().forEach(s => {
+                    const d = stepMap.get(s);
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: 700; color: var(--accent-cyan);">${s.toLocaleString()}</td>
+                        <td>${d.ep_len !== undefined ? d.ep_len.toFixed(2) : '--'}</td>
+                        <td style="color: ${d.ep_rew > -300 ? 'var(--accent-green)' : 'var(--text-main)'};">${d.ep_rew !== undefined ? d.ep_rew.toFixed(2) : '--'}</td>
+                        <td>${d.entropy_loss !== undefined ? (-d.entropy_loss).toFixed(4) : '--'}</td>
+                        <td>${d.approx_kl !== undefined ? d.approx_kl.toFixed(4) : '--'}</td>
+                        <td>${d.value_loss !== undefined ? d.value_loss.toFixed(2) : '--'}</td>
+                        <td>${d.policy_loss !== undefined ? d.policy_loss.toFixed(4) : '--'}</td>
+                        <td>${d.fps !== undefined ? Math.round(d.fps) : '--'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                // Update Health Diagnosis
+                renderDiagnostics(sortedSteps, stepMap);
+
+            } catch (err) {
+                console.error("Error updating dashboard details:", err);
+            }
+        }
+
+        function renderDiagnostics(steps, map) {
+            const firstStep = steps[0];
+            const lastStep = steps[steps.length - 1];
+            const firstLen = map.get(firstStep).ep_len || 0;
+            const lastLen = map.get(lastStep).ep_len || 0;
+            const lastEnt = map.get(lastStep).entropy_loss !== undefined ? -map.get(lastStep).entropy_loss : null;
+            const lastKL = map.get(lastStep).approx_kl || 0;
+
+            const list = document.getElementById('diagnosisList');
+            list.innerHTML = '';
+
+            // 1. Stage Readiness Check
+            const isStage2Ready = lastLen >= 120;
+            list.innerHTML += `
+                <div class="diag-item">
+                    <div class="diag-icon" style="color: ${isStage2Ready ? 'var(--accent-green)' : 'var(--accent-amber)'};">
+                        <i class="fa-solid ${isStage2Ready ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i>
+                    </div>
+                    <div>
+                        <div class="diag-title">${isStage2Ready ? 'Ready for Stage 2 (Clean Builder)' : 'Remain in Stage 1 (Survival Mastery)'}</div>
+                        <div class="diag-desc">${isStage2Ready ? 'Average survival exceeds 120 steps. Bot has learned baseline survival.' : `Current average survival is ${lastLen.toFixed(1)} steps. Target is > 100-120 steps before enabling stricter surface/combo penalties.`}</div>
+                    </div>
+                </div>
+            `;
+
+            // 2. Policy Entropy
+            if (lastEnt !== null) {
+                const entOk = lastEnt >= 0.9;
+                list.innerHTML += `
+                    <div class="diag-item">
+                        <div class="diag-icon" style="color: ${entOk ? 'var(--accent-green)' : 'var(--accent-amber)'};">
+                            <i class="fa-solid ${entOk ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i>
+                        </div>
+                        <div>
+                            <div class="diag-title">Policy Entropy: ${lastEnt.toFixed(2)} (${entOk ? 'Optimal' : 'Low Exploration'})</div>
+                            <div class="diag-desc">${entOk ? 'Active exploration across the 80 discrete action choices.' : 'Entropy is low; the bot may favor 2-3 repeated drop columns. ent_coef=0.005 recommended.'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. Optimization Stability
+            const klOk = lastKL <= 0.03;
+            list.innerHTML += `
+                <div class="diag-item">
+                    <div class="diag-icon" style="color: ${klOk ? 'var(--accent-green)' : 'var(--accent-red)'};">
+                        <i class="fa-solid ${klOk ? 'fa-circle-check' : 'fa-circle-xmark'}"></i>
+                    </div>
+                    <div>
+                        <div class="diag-title">Policy Gradient Stability: KL ${lastKL.toFixed(4)}</div>
+                        <div class="diag-desc">${klOk ? 'PPO clip ratio and learning rate are stable without disruptive jumps.' : 'High KL divergence detected. Updates are shifting the policy too fast.'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Event Listeners
+        document.getElementById('runSelect').addEventListener('change', (e) => {
+            currentRunId = e.target.value;
+            updateDashboard(currentRunId);
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            fetchRuns().then(() => updateDashboard(currentRunId));
+        });
+
+        // Initialize & Auto-poll
+        initCharts();
+        fetchRuns().then(() => updateDashboard(currentRunId));
+
+        autoPollTimer = setInterval(() => {
+            fetchRuns().then(() => updateDashboard(currentRunId));
+        }, 5000);
+    </script>
+</body>
+</html>
