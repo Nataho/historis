@@ -175,6 +175,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_d5hkn")
+autostart = true
+skipcountdown = true
 
 [node name="BoardPivot" type="Control" parent="." unique_id=1379325006]
 layout_mode = 1

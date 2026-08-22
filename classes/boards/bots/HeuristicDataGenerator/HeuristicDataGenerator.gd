@@ -215,7 +215,9 @@ func _start_new_demo_file() -> void:
 
 	DirAccess.make_dir_recursive_absolute(demo_output_dir)
 	var timestamp: String = Time.get_datetime_string_from_system().replace(":", "-")
-	var path: String = demo_output_dir.path_join("heuristic_gen_%s_p%d_%d.bin" % [timestamp, player_id, randi() % 100000])
+	var ms: int = Time.get_ticks_msec()
+	var pid: int = OS.get_process_id()
+	var path: String = demo_output_dir.path_join("heuristic_gen_%s_%d_pid%d_p%d_%d.bin" % [timestamp, ms, pid, player_id, randi() % 1000000])
 	_record_file = FileAccess.open(path, FileAccess.WRITE)
 	if _record_file == null:
 		push_error("[GENERATOR] Failed to open '%s' for writing!" % path)
