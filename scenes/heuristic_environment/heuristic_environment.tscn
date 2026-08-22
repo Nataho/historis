@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://b7sx563fjfgqv"]
+
+[ext_resource type="PackedScene" uid="uid://c2i73eaua1dsq" path="res://classes/boards/bots/HeuristicDataGenerator/HeuristicDataGenerator.tscn" id="1_4hrhu"]
+[ext_resource type="Script" uid="uid://df7uqa745d3qk" path="res://scenes/heuristic_environment/heuristic_environment.gd" id="1_xkohd"]
+
+[node name="HeuristicEnvironment" type="Control" unique_id=59012698]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_xkohd")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=471510498]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 607
+alignment = 1
+
+[node name="HeuristicDataGenerator" parent="HBoxContainer" unique_id=582100515 instance=ExtResource("1_4hrhu")]
+layout_mode = 2
+player_id = 1
+target_id = 2
+is_battle = true
+
+[node name="HeuristicDataGenerator2" parent="HBoxContainer" unique_id=1401763132 instance=ExtResource("1_4hrhu")]
+layout_mode = 2
+player_id = 2
+target_id = 1
+is_battle = true

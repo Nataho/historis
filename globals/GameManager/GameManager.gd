@@ -21,10 +21,17 @@ var match_data: Dictionary = {
 	}
 }
 
+var _is_muted = false
+
 func _ready() -> void:
+	_CLA()
 	if player_data.get("lobby_id", -1) == -1:
 		player_data["lobby_id"] = generate_lobby_id()
 	network_data["lobby_id"] = player_data["lobby_id"]
+	
+	#if _is_muted:
+		#var bus_idx = AudioServer.get_bus_index("Master")
+		#AudioServer.set_bus_mute(bus_idx,false)
 
 func generate_lobby_id() -> int:
 	return randi_range(10000, 99999)
@@ -49,3 +56,12 @@ func reset_network_data() -> void:
 		"player_list": [],
 		"lobby_id": player_data.get("lobby_id", -1)
 	}
+
+func _CLA():
+	var args = OS.get_cmdline_args()
+	if "--mute" in args:
+		print("muting")
+		_is_muted = true
+		AudioServer.set_bus_mute(0,true)
+	#if "--nostart" in args:
+		#no_start = true

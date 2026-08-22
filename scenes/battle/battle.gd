@@ -41,6 +41,8 @@ func _ready() -> void:
 	EventBus.client_disconnected.connect(_on_disconnected)
 	EventBus.player_topped_out.connect(func(victim_id: int, _attacker_id: int): _on_board_ko(victim_id))
 	
+	
+	
 	_setup_match()
 
 func _setup_match() -> void:
