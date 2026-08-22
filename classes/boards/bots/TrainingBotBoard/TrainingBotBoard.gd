@@ -37,15 +37,15 @@ enum RulesetPreset {
 @export var safe_stack_height: int = 6
 @export var danger_height_threshold: int = 13
 @export var critical_ceiling_height: int = 17
-@export var downstack_reward_weight: float = 1.5
-@export var high_danger_downstack_multiplier: float = 1.6
+@export var downstack_reward_weight: float = 2.5
+@export var high_danger_downstack_multiplier: float = 1.8
 @export var upstack_penalty_weight: float = 0.35
 @export var danger_upstack_penalty: float = 1.2
 @export var ceiling_step_penalty: float = 2.5
 
 @export_group("Holes & Buried Air Rules")
 @export var hole_creation_penalty: float = 4.5
-@export var hole_clear_reward: float = 4.5
+@export var hole_clear_reward: float = 5.5
 @export var soft_drop_hole_clear_multiplier: float = 0.5 ## Receiving half score when filling/clearing holes via soft drops vs hard drops
 @export var covered_blocks_penalty_weight: float = 0.5
 
@@ -54,10 +54,10 @@ enum RulesetPreset {
 @export var bumpiness_flatten_reward: float = 0.20
 
 @export_group("Line Clear Rules")
-@export var reward_single: float = 2.0
-@export var reward_double: float = 4.5
-@export var reward_triple: float = 8.0
-@export var reward_quad: float = 14.0
+@export var reward_single: float = 3.5
+@export var reward_double: float = 7.0
+@export var reward_triple: float = 12.0
+@export var reward_quad: float = 20.0
 @export var perfect_clear_bonus: float = 50.0
 @export var b2b_bonus_weight: float = 1.0
 @export var max_b2b_bonus: float = 5.0
@@ -117,23 +117,23 @@ func _apply_ruleset_preset(preset: RulesetPreset) -> void:
 			safe_stack_height = 6
 			danger_height_threshold = 13
 			critical_ceiling_height = 17
-			downstack_reward_weight = 1.5
-			high_danger_downstack_multiplier = 1.6
+			downstack_reward_weight = 2.5
+			high_danger_downstack_multiplier = 1.8
 			upstack_penalty_weight = 0.35
 			danger_upstack_penalty = 1.2
 			ceiling_step_penalty = 2.5
 
 			hole_creation_penalty = 4.5
-			hole_clear_reward = 4.5
+			hole_clear_reward = 5.5
 			covered_blocks_penalty_weight = 0.5
 
 			bumpiness_penalty = 0.20
 			bumpiness_flatten_reward = 0.20
 
-			reward_single = 2.0
-			reward_double = 4.5
-			reward_triple = 8.0
-			reward_quad = 14.0
+			reward_single = 3.5
+			reward_double = 7.0
+			reward_triple = 12.0
+			reward_quad = 20.0
 			perfect_clear_bonus = 50.0
 			b2b_bonus_weight = 1.0
 			max_b2b_bonus = 5.0

@@ -396,7 +396,7 @@ def main() -> None:
     num_envs = env.num_envs
 
     custom_hyperparams = {
-        "ent_coef": 0.015,
+        "ent_coef": 0.025,
         "learning_rate": 5e-5,
         "gamma": 0.99,
         "n_epochs": 4,
@@ -423,7 +423,7 @@ def main() -> None:
         )
     elif os.path.exists(BC_CHECKPOINT_PATH):
         log(f"🧑‍🏫 Found Behavior-Cloned headstart at {BC_CHECKPOINT_PATH}.")
-        log("   Starting PPO fine-tuning with target_kl=0.02, n_epochs=4, and ent_coef=0.015 (skills preserved!)")
+        log("   Starting PPO fine-tuning with target_kl=0.02, n_epochs=4, and ent_coef=0.025 (skills preserved!)")
         model = PPO.load(
             BC_CHECKPOINT_PATH,
             env=env,
@@ -447,7 +447,7 @@ def main() -> None:
             batch_size=min(512, N_STEPS * num_envs),
             learning_rate=5e-5,
             gamma=0.99,
-            ent_coef=0.015,
+            ent_coef=0.025,
             n_epochs=4,
             target_kl=0.02,
             max_grad_norm=0.5,
