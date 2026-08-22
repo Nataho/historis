@@ -33,6 +33,7 @@ enum RulesetPreset {
 @export var invalid_action_penalty: float = 1.0 ## Penalizes out-of-bounds column selections that had to be snapped
 @export var hard_drop_tile_reward: float = 0.02 ## Reward per vertical tile dropped (covers stack depth)
 @export var soft_drop_tile_multiplier: float = 0.5 ## Half reward per tile if soft drop path was required
+@export var hold_action_bonus: float = 0.20 ## Small incentive when the bot utilizes the hold queue instead of blindly dropping
 @export var low_stack_bonus: float = 0.25
 @export var safe_stack_height: int = 6
 @export var danger_height_threshold: int = 13
@@ -113,6 +114,7 @@ func _apply_ruleset_preset(preset: RulesetPreset) -> void:
 			milestone_750_bonus = 100.0
 
 			step_survival_reward = 1.0
+			hold_action_bonus = 0.20
 			low_stack_bonus = 0.25
 			safe_stack_height = 6
 			danger_height_threshold = 13
@@ -428,6 +430,10 @@ func _evaluate_placement_reward(prev: Dictionary, curr: Dictionary) -> void:
 	# Out-of-bounds invalid placement penalty
 	if last_action_was_snapped:
 		step_score -= invalid_action_penalty
+
+	# Hold usage bonus (encourages exploring hold swaps)
+	if last_action_used_hold and hold_action_bonus > 0:
+		step_score += hold_action_bonus
 
 	# Drop Distance / Depth Bonus (more tiles covered from spawn to lock = higher reward)
 	if last_drop_distance > 0 and hard_drop_tile_reward > 0:

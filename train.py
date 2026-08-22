@@ -421,6 +421,7 @@ def main() -> None:
             custom_objects=custom_hyperparams,
             tensorboard_log=TENSORBOARD_DIR,
         )
+        model.ent_coef = custom_hyperparams["ent_coef"]
     elif os.path.exists(BC_CHECKPOINT_PATH):
         log(f"🧑‍🏫 Found Behavior-Cloned headstart at {BC_CHECKPOINT_PATH}.")
         log("   Starting PPO fine-tuning with target_kl=0.02, n_epochs=4, and ent_coef=0.025 (skills preserved!)")
@@ -431,6 +432,7 @@ def main() -> None:
             custom_objects=custom_hyperparams,
             tensorboard_log=TENSORBOARD_DIR,
         )
+        model.ent_coef = custom_hyperparams["ent_coef"]
         model.num_timesteps = 0
     else:
         log("Creating a fresh PPO model (no checkpoint found).")
