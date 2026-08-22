@@ -63,8 +63,7 @@ func _enter_tree() -> void:
 
 	_music = {
 		"menu_loop": [preload("uid://c1hsx4s22yct8"), 0],
-		"battle": []
-		
+		"epic_battle": [preload("uid://bm2ur8b2ug1nv"), 0]
 	}
 
 # ==========================================
@@ -123,6 +122,9 @@ func play_music(music_key: String, end_effect: SOUND_END_EFFECTS = SOUND_END_EFF
 		
 	print("Now playing: ", music_key)
 	print("is playing?: ", music_player_node.playing)
+
+func stop_music():
+	music_player_node.stop()
 
 func _trigger_fade_out(duration: float = 1.5) -> void:
 	if stop_tween and stop_tween.is_running():

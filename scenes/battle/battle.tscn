@@ -80,7 +80,9 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
-scale = Vector2(0.75, 0.75)
+offset_transform_enabled = true
+offset_transform_position = Vector2(50, 50)
+offset_transform_scale = Vector2(0.85, 0.85)
 
 [node name="Player2Anchor" type="Control" parent="." unique_id=788172725]
 unique_name_in_owner = true
@@ -92,7 +94,9 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
-scale = Vector2(0.75, 0.75)
+offset_transform_enabled = true
+offset_transform_position = Vector2(-50, 50)
+offset_transform_scale = Vector2(0.85, 0.85)
 
 [node name="HUD" type="Control" parent="." unique_id=1056551818]
 layout_mode = 1

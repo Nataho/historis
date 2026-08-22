@@ -178,8 +178,8 @@ script = ExtResource("1_ygqur")
 DAS_MS = 45.0
 ARR_MS = 0.0
 SDF_MS = 0.0
-record_player = true
 autostart = true
+skipcountdown = true
 
 [node name="BoardPivot" type="Control" parent="." unique_id=1321192233]
 layout_mode = 1

@@ -15,6 +15,7 @@ var is_local_ready: bool = false
 var max_players: int = 8
 
 func _ready() -> void:
+	Audio.play_music("menu_loop")
 	is_local_ready = false
 	_setup_ui_for_role()
 	_connect_signals()

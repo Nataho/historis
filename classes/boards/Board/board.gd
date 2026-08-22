@@ -3,6 +3,7 @@ const BOARD = preload("uid://mva1yisyf7cs")
 
 signal board_topped_out
 signal board_reset
+signal board_started
 signal countdown_ticked(time_left: int)
 signal shake_finished
 
@@ -285,6 +286,9 @@ func start(countdown: int = 3) -> void:
 		_initialize_engine()
 	
 	if engine != null:
+		# ADD IT HERE: Generate the queue pieces so the player can see them during the countdown!
+		engine.start_game() 
+		# INSTANTLY FREEZE the engine so they can't drop pieces early
 		engine.is_topped_out = true
 	
 	if countdown > 0:
@@ -300,11 +304,12 @@ func start(countdown: int = 3) -> void:
 	
 	await get_tree().create_timer(1.2).timeout
 	tick.text = ""
+	board_started.emit()
 	
-	# Start the game AFTER everything is hooked up!
 	if engine != null:
+		# UNFREEZE the board so the player can play!
 		engine.is_topped_out = false
-		engine.start_game()
+		# (Note: engine.start_game() is safely removed from here)
 		_update_garbage_display()
 
 func get_rand_id():
@@ -500,6 +505,11 @@ func _on_topout() -> void:
 	active_piece_layer.clear()
 	ghost_piece_layer.clear()
 	board_topped_out.emit()
+	placed_tiles_layer.modulate = Color(0.3,0.3,0.3)
+	shake(16)
+
+func freeze():
+	engine.is_topped_out = true
 
 ## Fully resets this board back to a fresh game state after a topout (or any
 ## time a clean restart is wanted). engine.start_game() wipes the grid, queue,
@@ -518,7 +528,7 @@ func reset(new_seed: int = -1) -> void:
 		engine.randomization_seed = randomization_seed
 	
 	b2b_streak = 0
-	engine.start_game()
+	#engine.start_game()
 	
 	_target_meter_height = 0
 	if _meter_stylebox != null:
@@ -527,6 +537,8 @@ func reset(new_seed: int = -1) -> void:
 	tick.text = ""
 	board_reset.emit()
 	hold_slot.clear()
+	placed_tiles_layer.modulate = Color.WHITE
+	_target_meter_height = 0
 
 func _update_garbage_display() -> void:
 	if engine == null or meter == null:

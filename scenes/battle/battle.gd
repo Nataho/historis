@@ -27,12 +27,14 @@ var local_player_id: int = -1
 var is_spectator: bool = false
 var is_host: bool = false
 
+var initial_start: bool = false
 var game_started: bool = false
 var game_finished: bool = false
 var is_resetting: bool = false
 var match_round: int = 1
 
 func _ready() -> void:
+	Audio.stop_music()
 	back_btn.pressed.connect(_on_back_pressed)
 	
 	EventBus.sync_data.connect(_on_sync_data_received)
@@ -40,8 +42,6 @@ func _ready() -> void:
 	EventBus.client_left_lobby.connect(_on_player_left_lobby)
 	EventBus.client_disconnected.connect(_on_disconnected)
 	EventBus.player_topped_out.connect(func(victim_id: int, _attacker_id: int): _on_board_ko(victim_id))
-	
-	
 	
 	_setup_match()
 
@@ -128,13 +128,16 @@ func _process(delta: float) -> void:
 	if p2_anchor != null:
 		p2_anchor.position = p2_anchor.position.lerp(p2_target, lerp_weight)
 
+func _battle_started():
+	if initial_start: return
+	initial_start = true
+	Audio.play_music("epic_battle")
+
 func _run_intro_sequence() -> void:
 	center_banner_panel.show()
 	center_banner.text = "[center][wave amp=40 freq=4][color=#FFF1D1]ROUND %d[/color][/wave]\n[color=#00B7CD]MATCH START[/color][/center]" % match_round
 	
-	Audio.play_music("menu_loop")
-	
-	await get_tree().create_timer(1.2).timeout
+	await get_tree().create_timer(2).timeout
 	center_banner_panel.hide()
 	
 	# Signal ready to server/peers
@@ -186,10 +189,15 @@ func _start_countdown() -> void:
 	game_started = true
 	is_resetting = false
 	
+	var local_board:LocalBoard
+	
 	# Each board runs its own 3-2-1-GO countdown on its tick label.
 	# This mirrors the reference: board.start(3) on ALL boards.
 	for b in active_boards.values():
 		b.start(3)
+		if b is LocalBoard: local_board = b
+		
+	local_board.board_started.connect(_battle_started)
 
 func _on_board_data_received(payload: Dictionary) -> void:
 	var type = payload.get("update_type", "")
@@ -242,7 +250,7 @@ func _on_board_ko(victim_id: int) -> void:
 			"seed": new_seed,
 			"scores": {"p1": p1_score, "p2": p2_score}
 		})
-		_perform_next_round(new_seed)
+		#_perform_next_round(new_seed)
 
 func _perform_next_round(next_seed: int) -> void:
 	is_resetting = true
@@ -276,7 +284,7 @@ func _perform_match_over(winner_id: int) -> void:
 	
 	Audio.play_sound("KO")
 	
-	await get_tree().create_timer(3.5).timeout
+	await get_tree().create_timer(5).timeout
 	_return_to_lobby()
 
 func _update_scoreboard() -> void:

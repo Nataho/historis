@@ -4,7 +4,7 @@ func _ready() -> void:
 	var board := LocalBoard.create(1,2,1)
 	$Control.add_child(board)
 	board.set_anchors_preset(Control.PRESET_CENTER)
-	board.start()
+	board.start(3)
 
 #@onready var hbox: HBoxContainer = $HBoxContainer
 #

@@ -78,71 +78,6 @@ grow_horizontal = 2
 text = "HISTORIS"
 label_settings = SubResource("LabelSettings_vxpyd")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1905310828]
-visible = false
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -225.0
-offset_top = -62.0
-offset_right = 225.0
-offset_bottom = 226.0
-grow_horizontal = 2
-grow_vertical = 2
-pivot_offset = Vector2(225, 144)
-alignment = 1
-
-[node name="singleplayer" type="Button" parent="VBoxContainer" unique_id=1661898630]
-custom_minimum_size = Vector2(0, 68.575)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 10
-theme_override_fonts/font = ExtResource("1_hyk8p")
-theme_override_font_sizes/font_size = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
-theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
-text = "singleplayer"
-
-[node name="multiplayer" type="Button" parent="VBoxContainer" unique_id=1246076294]
-custom_minimum_size = Vector2(0, 68.575)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 10
-theme_override_fonts/font = ExtResource("1_hyk8p")
-theme_override_font_sizes/font_size = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
-theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
-text = "Multiplayer"
-
-[node name="settings" type="Button" parent="VBoxContainer" unique_id=1862161606]
-custom_minimum_size = Vector2(0, 68.575)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 10
-theme_override_fonts/font = ExtResource("1_hyk8p")
-theme_override_font_sizes/font_size = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
-theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
-text = "settings"
-
-[node name="exit" type="Button" parent="VBoxContainer" unique_id=830644565]
-custom_minimum_size = Vector2(0, 68.575)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 10
-theme_override_fonts/font = ExtResource("1_hyk8p")
-theme_override_font_sizes/font_size = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_iuonh")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_k2fmo")
-theme_override_styles/hover = SubResource("StyleBoxFlat_l3cfh")
-text = "exit"
-
 [node name="VBoxContainer2" type="VBoxContainer" parent="." unique_id=1266329109]
 layout_mode = 1
 anchors_preset = 8
@@ -227,4 +162,5 @@ modulate = Color(1, 1, 1, 0)
 layout_mode = 2
 theme_override_constants/separation = 142
 
-[connection signal="pressed" from="VBoxContainer/exit" to="." method="exit"]
+[connection signal="pressed" from="VBoxContainer2/HBoxContainer/multiplayer" to="." method="_on_multiplayer_pressed"]
+[connection signal="pressed" from="VBoxContainer2/HBoxContainer2/exit" to="." method="exit"]

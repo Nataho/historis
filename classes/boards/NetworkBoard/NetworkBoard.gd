@@ -148,7 +148,8 @@ func _apply_ko_update(payload: Dictionary) -> void:
 	tick.text = "KO!"
 	board_topped_out.emit()
 	EventBus.player_topped_out.emit(player_id, last_attacker)
-	shake(12.0, 0.3)
+	placed_tiles_layer.modulate = Color(0.3,0.3,0.3)
+	shake(16.0, 0.3)
 	if anim != null: anim.play("popup")
 
 func _set_meter_height(pending_lines: int) -> void:
