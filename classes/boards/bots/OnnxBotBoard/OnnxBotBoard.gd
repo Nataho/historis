@@ -40,8 +40,8 @@ func _initialize_engine() -> void:
 		if not engine.game_over.is_connected(_on_game_over):
 			engine.game_over.connect(_on_game_over)
 
-func start() -> void:
-	super.start()
+func start(countdown:int = 3) -> void:
+	super.start(countdown)
 	b2b_streak = 0
 	is_thinking = false
 	if engine != null:

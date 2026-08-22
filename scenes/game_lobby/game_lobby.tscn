@@ -1,0 +1,217 @@
+[gd_scene format=3 uid="uid://cc3pox31stj8m"]
+
+[ext_resource type="Script" uid="uid://c4axdg6bbmdny" path="res://scenes/game_lobby/game_lobby.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://cm0kofx4wpdln" path="res://assets/fonts/KRKZ Blockes 2(2).ttf" id="2_font"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("2_font")
+font_size = 48
+font_color = Color(0.18, 0.18, 0.18, 1)
+outline_size = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_red"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0.87451, 0.188235, 0.109804, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_orange"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 0.568627, 0, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(1, 1, 1, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_blue"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0.717647, 0.803922, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="GameLobby" type="Control" unique_id=150229921]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1070875080]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0.945098, 0.819608, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=431570160]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1469524869]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=685960392]
+layout_mode = 2
+
+[node name="TitleBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Header" unique_id=1972565965]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LobbyTitle" type="Label" parent="MarginContainer/VBoxContainer/Header/TitleBox" unique_id=398947463]
+unique_name_in_owner = true
+layout_mode = 2
+text = "GAME LOBBY"
+label_settings = SubResource("LabelSettings_title")
+
+[node name="RoomInfoLabel" type="Label" parent="MarginContainer/VBoxContainer/Header/TitleBox" unique_id=2118458942]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = "Role: Host | Max Players: 8"
+
+[node name="LeaveButton" type="Button" parent="MarginContainer/VBoxContainer/Header" unique_id=1532616091]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_red")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_orange")
+text = "LEAVE LOBBY"
+
+[node name="MainContent" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=72651794]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="PlayersPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/MainContent" unique_id=1944607520]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/MainContent/PlayersPanel" unique_id=45599284]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PlayersLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/PlayersPanel/VBox" unique_id=82991837]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.2, 0.2, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+text = "PLAYERS IN LOBBY"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/MainContent/PlayersPanel/VBox" unique_id=789990911]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PlayersContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/MainContent/PlayersPanel/VBox/ScrollContainer" unique_id=1846409270]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ChatPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/MainContent" unique_id=1177924399]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/MainContent/ChatPanel" unique_id=1175026040]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ChatLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/ChatPanel/VBox" unique_id=1875257785]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.2, 0.2, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+text = "LOBBY ACTIVITY & CHAT"
+
+[node name="ChatLog" type="RichTextLabel" parent="MarginContainer/VBoxContainer/MainContent/ChatPanel/VBox" unique_id=445928565]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+
+[node name="ChatInputRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MainContent/ChatPanel/VBox" unique_id=529223341]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ChatInput" type="LineEdit" parent="MarginContainer/VBoxContainer/MainContent/ChatPanel/VBox/ChatInputRow" unique_id=1078749002]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Type a message..."
+
+[node name="SendButton" type="Button" parent="MarginContainer/VBoxContainer/MainContent/ChatPanel/VBox/ChatInputRow" unique_id=2073817969]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 36)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_blue")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_orange")
+text = "SEND"
+
+[node name="BottomActions" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=46095062]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="ReadyButton" type="Button" parent="MarginContainer/VBoxContainer/BottomActions" unique_id=1298221757]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 52)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_blue")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_orange")
+text = "READY UP"
+
+[node name="StartButton" type="Button" parent="MarginContainer/VBoxContainer/BottomActions" unique_id=1005864249]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 52)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_orange")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_blue")
+text = "START GAME"

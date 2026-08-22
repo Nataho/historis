@@ -1,0 +1,188 @@
+[gd_scene format=3 uid="uid://bc8qcyok4b3vu"]
+
+[ext_resource type="Script" uid="uid://cr42y56qcoqfx" path="res://scenes/battle/battle.gd" id="1_battle"]
+[ext_resource type="FontFile" uid="uid://cm0kofx4wpdln" path="res://assets/fonts/KRKZ Blockes 2(2).ttf" id="2_font"]
+[ext_resource type="Script" uid="uid://b5hp6kgtmngmp" path="res://scritps/rich_text_bounce.gd" id="3_xd4uy"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.08, 0.12, 0.11, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topbar"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.05, 0.08, 0.07, 0.85)
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="RichTextEffect" id="RichTextEffect_pa76s"]
+script = ExtResource("3_xd4uy")
+metadata/_custom_type_script = "uid://b5hp6kgtmngmp"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+content_margin_left = 14.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 6.0
+bg_color = Color(0.875, 0.188, 0.11, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_banner"]
+content_margin_left = 30.0
+content_margin_top = 20.0
+content_margin_right = 30.0
+content_margin_bottom = 20.0
+bg_color = Color(0.04, 0.07, 0.06, 0.92)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0, 0.718, 0.804, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="RichTextEffect" id="RichTextEffect_iyx0m"]
+script = ExtResource("3_xd4uy")
+metadata/_custom_type_script = "uid://b5hp6kgtmngmp"
+
+[node name="Battle" type="Control" unique_id=152390185]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_battle")
+
+[node name="Background" type="Panel" parent="." unique_id=1393621821]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="Player1Anchor" type="Control" parent="." unique_id=745676311]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Player2Anchor" type="Control" parent="." unique_id=788172725]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HUD" type="Control" parent="." unique_id=1056551818]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" type="PanelContainer" parent="HUD" unique_id=229513622]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 68.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_topbar")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HUD/TopBar" unique_id=916292004]
+layout_mode = 2
+alignment = 1
+
+[node name="P1NameLabel" type="Label" parent="HUD/TopBar/HBoxContainer" unique_id=1283089374]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 28
+text = "PLAYER 1"
+
+[node name="Scoreboard" type="RichTextLabel" parent="HUD/TopBar/HBoxContainer" unique_id=247965163]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/normal_font = ExtResource("2_font")
+theme_override_font_sizes/normal_font_size = 32
+bbcode_enabled = true
+text = "[center](0/3)   FT3   (0/3)[/center]"
+fit_content = true
+scroll_active = false
+custom_effects = [SubResource("RichTextEffect_pa76s")]
+
+[node name="P2NameLabel" type="Label" parent="HUD/TopBar/HBoxContainer" unique_id=1564370128]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 28
+text = "PLAYER 2"
+horizontal_alignment = 2
+
+[node name="BackButton" type="Button" parent="HUD" unique_id=1684779571]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -54.0
+offset_right = 130.0
+offset_bottom = -20.0
+grow_vertical = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "EXIT MATCH"
+
+[node name="CenterBannerPanel" type="PanelContainer" parent="HUD" unique_id=949563425]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -100.0
+offset_right = 260.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_banner")
+
+[node name="CenterBanner" type="RichTextLabel" parent="HUD/CenterBannerPanel" unique_id=1106808692]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/normal_font = ExtResource("2_font")
+theme_override_font_sizes/normal_font_size = 42
+bbcode_enabled = true
+text = "[center]MATCH START[/center]"
+fit_content = true
+scroll_active = false
+custom_effects = [SubResource("RichTextEffect_iyx0m")]

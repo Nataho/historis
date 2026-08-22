@@ -201,11 +201,29 @@ func start_game() -> void:
 	_refill_queue()
 	spawn_piece()
 
+var rng: RandomNumberGenerator = null
+var randomization_seed: int = -1:
+	set(val):
+		randomization_seed = val
+		if val != -1:
+			if rng == null:
+				rng = RandomNumberGenerator.new()
+			rng.seed = val
+		else:
+			rng = null
+
 func _generate_bag() -> Array[String]:
 	var new_bag: Array[String] = []
 	for key in loaded_shapes.keys():
 		new_bag.append(key)
-	new_bag.shuffle()
+	if rng != null:
+		for i in range(new_bag.size() - 1, 0, -1):
+			var j = rng.randi_range(0, i)
+			var tmp = new_bag[i]
+			new_bag[i] = new_bag[j]
+			new_bag[j] = tmp
+	else:
+		new_bag.shuffle()
 	return new_bag
 
 func _refill_queue() -> void:

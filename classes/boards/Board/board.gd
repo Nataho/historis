@@ -1,12 +1,16 @@
 class_name Board extends Control
+const BOARD = preload("uid://mva1yisyf7cs")
 
 signal board_topped_out
 signal board_reset
+signal countdown_ticked(time_left: int)
+signal shake_finished
 
 const TARGET_TILE_SIZE: float = 27.0
 
 @export var autostart:bool = false
 @export var skipcountdown:bool = false
+@export var randomization_seed: int = -1
 
 @export var BOARD_SIZE := Vector2i(10, 20)
 var GRID_OFFSET := Vector2i(-BOARD_SIZE.x / 2, -BOARD_SIZE.y / 2)
@@ -60,11 +64,17 @@ var knockouts:int = 0
 @export var opponent_board: Board
 
 const PIECE_ID_MAP: Dictionary = {
-	"": 0, "Z": 1, "L": 2, "O": 3, "S": 4, "I": 5, "J": 6, "T": 7
+	"Z": 0, "L": 1, "O": 2, "S": 3, "I": 4, "J": 5, "T": 6
 }
 const ACTION_SPACE_SIZE: int = 80
 
 var b2b_streak: int = 0
+
+var username: String = ""
+var username_label: Label = null
+var queue_hidden: bool = false
+var _initial_position: Vector2 = Vector2.ZERO
+var _shake_tween: Tween = null
 
 func _ready() -> void:
 	_setup_board_scale()
@@ -263,35 +273,39 @@ func encode_action(target_rot: int, target_x: int, use_hold: bool) -> int:
 
 func start_sequence():
 	if skipcountdown:
-		start()
+		start(0)
 		return
-		
-	await get_tree().create_timer(1).timeout
-	tick.text = "3"
-	Audio.play_sound("tick_3")
-	anim.play("popup")
-	await get_tree().create_timer(1).timeout
-	tick.text = "2"
-	Audio.play_sound("tick_2")
-	anim.play("popup")
-	
-	await get_tree().create_timer(1).timeout
-	tick.text = "1"
-	Audio.play_sound("tick_1")
-	anim.play("popup")
-	
-	await get_tree().create_timer(1).timeout
-	tick.text = "go!"
-	Audio.play_sound("tick_go")
-	anim.play("popup")
-	
-	await get_tree().create_timer(1.5).timeout
-	tick.text = ""
-	start()
-	
+	start(3)
 
-func start():
-	_initialize_engine()
+## Plays the countdown on THIS board's tick label, then starts the engine.
+## Both LocalBoard and NetworkBoard call this so both sides of the screen
+## show the 3-2-1-GO animation in sync. NetworkBoard skips engine start.
+func start(countdown: int = 3) -> void:
+	if engine == null and pieces_controller == null:
+		_initialize_engine()
+	
+	if engine != null:
+		engine.is_topped_out = true
+	
+	if countdown > 0:
+		for i in range(countdown, 0, -1):
+			tick.text = str(i)
+			Audio.play_sound("tick_" + str(i))
+			if anim != null: anim.play("popup")
+			await get_tree().create_timer(1).timeout
+	
+	tick.text = "GO!"
+	Audio.play_sound("tick_go")
+	if anim != null: anim.play("popup")
+	
+	await get_tree().create_timer(1.2).timeout
+	tick.text = ""
+	
+	# Start the game AFTER everything is hooked up!
+	if engine != null:
+		engine.is_topped_out = false
+		engine.start_game()
+		_update_garbage_display()
 
 func get_rand_id():
 	randomize()
@@ -302,6 +316,10 @@ func get_rand_id():
 	elif self is CloobBotBoard:
 		message += "Bot Board ID: "
 	print(message, " ", player_id)
+
+func stop() -> void:
+	if engine != null:
+		engine.is_topped_out = true
 
 func _setup_board_scale() -> void:
 	if placed_tiles_layer == null or board_pivot == null: return
@@ -322,15 +340,13 @@ func _setup_board_scale() -> void:
 func _initialize_engine() -> void:
 	engine = TetrisEngine.new(BOARD_SIZE.x, BOARD_SIZE.y, PREVIEW_COUNT)
 	engine.instant_garbage = instant_garbage
-	#print(player_id)
+	if randomization_seed != -1: engine.randomization_seed = randomization_seed
 	engine.player_id = int(player_id)
 	
 	pieces_controller = PiecesController.new()
 	add_child(pieces_controller)
 	engine.pieces_controller = pieces_controller
-	
-	var json_data = pieces_controller.get_piece_forms()
-	engine.load_piece_definitions(json_data)
+	engine.load_piece_definitions(pieces_controller.get_piece_forms())
 	
 	if hold_slot.tile_texture == null and queue_display.tile_texture != null:
 		hold_slot.tile_texture = queue_display.tile_texture
@@ -340,37 +356,23 @@ func _initialize_engine() -> void:
 	engine.lines_cleared.connect(_on_lines_cleared)
 	engine.garbage_sent.connect(_on_garbage_sent)
 	engine.garbage_applied.connect(_on_garbage_applied)
-	engine.garbage_received.connect(func(_pending_total: int): _update_garbage_display())
-	engine.garbage_applied.connect(func(_rows_added: int): _update_garbage_display())
+	engine.garbage_received.connect(func(_p): _update_garbage_display())
+	engine.garbage_applied.connect(func(_r): _update_garbage_display())
 	engine.game_over.connect(_on_topout)
 	
 	if is_battle and not EventBus.send_garbage.is_connected(_on_network_garbage_received):
 		EventBus.send_garbage.connect(_on_network_garbage_received)
-		print("[GARBAGE][BOARD ", player_id, "] listening for incoming garbage (is_battle=true, target_id=", target_id, ")")
-	elif not is_battle:
-		print("[GARBAGE][BOARD ", player_id, "] is_battle is FALSE - this board will never send or receive garbage")
 	
 	queue_display.setup_slots()
-	
-	engine.queue_changed.connect(func(next_pieces: Array[String]):
-		queue_display.update_display(
-			next_pieces, 
-			pieces_controller.get_piece_forms(), 
-			engine.piece_indices
-		)
-	)
-	
-	engine.hold_changed.connect(func(piece_key: String):
-		var ascii_grid = pieces_controller.get_piece_forms().get(piece_key, [])
-		var tile_idx = engine.piece_indices.get(piece_key, 0)
-		hold_slot.render_ascii_piece(ascii_grid, tile_idx)
+	engine.queue_changed.connect(func(next_pieces): queue_display.update_display(next_pieces, pieces_controller.get_piece_forms(), engine.piece_indices))
+	engine.hold_changed.connect(func(piece_key): 
+		var ascii = pieces_controller.get_piece_forms().get(piece_key, [])
+		hold_slot.render_ascii_piece(ascii, engine.piece_indices.get(piece_key, 0))
 		Audio.play_sound("hold")
 	)
-	
 	engine.hard_dropped.connect(func(): Audio.play_sound("hard_drop"))
 	
-	engine.start_game()
-	_update_garbage_display()
+	# REMOVED engine.start_game() FROM HERE!
 
 # --- View Rendering Callbacks ---
 
@@ -506,9 +508,14 @@ func _on_topout() -> void:
 ## is what actually lets input/bot/network control the board again. Board-
 ## side visuals (meter, b2b streak) are reset here to match, since the engine
 ## has no notion of those.
-func reset() -> void:
+func reset(new_seed: int = -1) -> void:
+	if new_seed != -1:
+		randomization_seed = new_seed
 	if engine == null:
 		return
+	
+	if randomization_seed != -1:
+		engine.randomization_seed = randomization_seed
 	
 	b2b_streak = 0
 	engine.start_game()
@@ -540,3 +547,74 @@ func _update_garbage_display() -> void:
 	var fill_ratio: float = float(total_garbage) / float(GARBAGE_METER_MAX_LINES)
 	#_meter_stylebox.border_width_bottom = int(meter.size.y * fill_ratio)
 	_target_meter_height = int(meter.size.y * fill_ratio)
+
+func add_username(new_username: String) -> void:
+	username = new_username
+	if username_label == null:
+		username_label = Label.new()
+		username_label.name = "UsernameLabel"
+		username_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		username_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		username_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		username_label.position = Vector2(-150, -360)
+		username_label.size = Vector2(300, 40)
+		username_label.add_theme_font_size_override("font_size", 22)
+		username_label.add_theme_color_override("font_color", Palette.RETRO.BEIGE)
+		if board_pivot != null:
+			board_pivot.add_child(username_label)
+		else:
+			add_child(username_label)
+	username_label.text = username.to_upper()
+	username_label.show()
+
+func hide_queue() -> void:
+	if queue_display != null:
+		queue_display.hide()
+	queue_hidden = true
+
+func show_queue() -> void:
+	if queue_display != null:
+		queue_display.show()
+	queue_hidden = false
+
+func shake(intensity: float = 8.0, duration: float = 0.25) -> void:
+	if _initial_position == Vector2.ZERO:
+		_initial_position = position
+
+	if _shake_tween and _shake_tween.is_running():
+		_shake_tween.kill()
+
+	_shake_tween = create_tween()
+	var shake_count: int = 10
+	var step_time: float = duration / float(shake_count)
+
+	for i in range(shake_count):
+		var offset := Vector2(
+			randf_range(-intensity, intensity),
+			randf_range(-intensity, intensity)
+		)
+		_shake_tween.tween_property(self, "position", _initial_position + offset, step_time)
+		intensity *= 0.8
+
+	_shake_tween.tween_property(self, "position", _initial_position, step_time)
+	_shake_tween.finished.connect(func(): shake_finished.emit())
+
+func get_placed_tiles_data() -> Array:
+	var data: Array = []
+	if placed_tiles_layer == null: return data
+	for cell in placed_tiles_layer.get_used_cells():
+		var atlas_coords = placed_tiles_layer.get_cell_atlas_coords(cell)
+		data.append({
+			"x": cell.x,
+			"y": cell.y,
+			"type": atlas_coords.x
+		})
+	return data
+
+func set_placed_tiles_data(data: Array) -> void:
+	if placed_tiles_layer == null: return
+	placed_tiles_layer.clear()
+	for t in data:
+		var pos = Vector2i(int(t.get("x", 0)), int(t.get("y", 0)))
+		var tile_type = int(t.get("type", 0))
+		placed_tiles_layer.set_cell(pos, 0, Vector2i(tile_type, 0))

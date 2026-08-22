@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://b46vsym50goy1"]
 
 [ext_resource type="Script" uid="uid://dfy65bdyax7a7" path="res://scenes/test.gd" id="1_iyx0m"]
-[ext_resource type="PackedScene" uid="uid://c2i73eaua1dsq" path="res://classes/boards/bots/HeuristicDataGenerator/HeuristicDataGenerator.tscn" id="2_bl13t"]
 
 [node name="test" type="Control" unique_id=314429075]
 layout_mode = 3
@@ -11,9 +10,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_iyx0m")
-slow_down = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=877104747]
+[node name="Control" type="Control" parent="." unique_id=1593214727]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -26,23 +24,3 @@ offset_right = 20.0
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 555
-alignment = 1
-
-[node name="BotBoard1" parent="HBoxContainer" unique_id=582100515 node_paths=PackedStringArray("opponent_board") instance=ExtResource("2_bl13t")]
-layout_mode = 2
-move_delay_ms = 1.0
-rotate_delay_ms = 10.0
-player_id = 1
-target_id = 2
-is_battle = true
-opponent_board = NodePath("../BotBoard2")
-
-[node name="BotBoard2" parent="HBoxContainer" unique_id=2022148987 node_paths=PackedStringArray("opponent_board") instance=ExtResource("2_bl13t")]
-layout_mode = 2
-move_delay_ms = 1.0
-rotate_delay_ms = 10.0
-player_id = 2
-target_id = 1
-is_battle = true
-opponent_board = NodePath("../BotBoard1")

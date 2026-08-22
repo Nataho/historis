@@ -62,7 +62,8 @@ func _enter_tree() -> void:
 	}
 
 	_music = {
-		"menu_loop": [preload("uid://c1hsx4s22yct8"), 0]
+		"menu_loop": [preload("uid://c1hsx4s22yct8"), 0],
+		"battle": []
 		
 	}
 

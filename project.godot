@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Historis"
-run/main_scene="uid://b46vsym50goy1"
+run/main_scene="uid://cgbpcvveayk8"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
@@ -24,6 +24,8 @@ buses/default_bus_layout="uid://c8w1uk642v6bk"
 EventBus="*uid://b7717e526xhlu"
 Audio="*uid://bcg1r3nox5881"
 Palette="*uid://dxbk55qrbklye"
+GameManager="*res://globals/GameManager/GameManager.gd"
+NetworkSync="*res://classes/websocket/NetworkSync/NetworkSync.gd"
 
 [display]
 

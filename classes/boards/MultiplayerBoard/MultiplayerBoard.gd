@@ -1,5 +1,7 @@
 class_name MultiplayerBoard extends Board
 
+# Inherits signal knocked_out(victim_id: int) and signal board_topped_out from Board
+
 # --- HARDCODED HANDLING SETTINGS (in milliseconds) ---
 @export var DAS_MS: float = 167.0
 @export var ARR_MS: float = 33.0
@@ -7,6 +9,7 @@ class_name MultiplayerBoard extends Board
 @export var DCD_MS: float = 50.0
 
 @export var is_local_player: bool = true
+var player_ready: bool = false
 
 # --- HUMAN PLAY RECORDING (for behavior-cloning pretraining) ---
 # Off by default on purpose — recording writes a file every time a piece
@@ -129,17 +132,10 @@ func _write_demo_sample(obs: PackedFloat32Array, action_idx: int) -> void:
 	_record_file.flush()
 
 func _process(delta: float) -> void:
-	if engine != null:
-		engine.process_garbage(delta * 1000.0) # Board._process is overridden here, so tick it directly.
-		# Runs regardless of is_local_player -- opponent boards receive and
-		# must drain garbage too, they just don't read local input for it.
+	# Let the parent Board handle the garbage ticks and meter animations automatically!
+	super._process(delta)
 
-	# Board._process() also animates the garbage meter's fill toward
-	# _target_meter_height — replicated here since this override doesn't
-	# call super._process() (that would double-tick process_garbage above).
-	if _meter_stylebox != null:
-		_meter_stylebox.border_width_bottom = lerp(_meter_stylebox.border_width_bottom, _target_meter_height, delta * 10)
-
+	# The base board handled the visuals, now early-return if we shouldn't process local physics
 	if engine == null or not is_local_player: return
 	
 	var delta_ms: float = delta * 1000.0
@@ -251,3 +247,25 @@ func _stop_horizontal_move(dir: int) -> void:
 func _apply_dcd() -> void:
 	if DCD_MS > 0.0 and move_dir != 0:
 		das_timer = maxf(0.0, das_timer - DCD_MS)
+
+func setup_multiplayer(my_id: int, enemy_id: int) -> void:
+	player_id = my_id
+	target_id = enemy_id
+	is_battle = true
+
+func toggle_ready() -> bool:
+	player_ready = not player_ready
+	return player_ready
+
+func stop() -> void:
+	is_local_player = false
+	if engine != null:
+		engine.is_topped_out = true
+
+func handle_death_sequence() -> void:
+	Audio.play_sound("KO")
+	board_topped_out.emit()
+	shake(12.0, 0.3)
+	await shake_finished
+	if anim != null:
+		anim.play("popup")

@@ -7,7 +7,9 @@ class_name QueueSlot extends Control
 var current_grid: Array = []
 var tile_index: int = 0
 
+# in QueueSlot.gd
 func render_ascii_piece(ascii_grid: Array, piece_tile_index: int = 0) -> void:
+	print("[QueueSlot ", name, "] grid=", ascii_grid, " idx=", piece_tile_index)
 	current_grid = ascii_grid
 	tile_index = piece_tile_index
 	queue_redraw()
@@ -18,6 +20,9 @@ func clear() -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	print("[QueueSlot ", name, "] draw, size=", size, " grid_empty=", current_grid.is_empty())
+	if not tile_texture:
+		tile_texture = preload("res://assets/textures/tiles.png")
 	if current_grid.is_empty() or not tile_texture or atlas_columns <= 0:
 		return
 		
