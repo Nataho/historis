@@ -297,6 +297,11 @@ func _initialize_engine() -> void:
 		if not engine.garbage_applied.is_connected(_on_garbage_applied):
 			engine.garbage_applied.connect(_on_garbage_applied)
 
+func reset(new_seed: int = -1) -> void:
+	super.reset(new_seed)
+	if engine != null:
+		engine.start_game()
+
 func start_ai_loop() -> void:
 	if is_running_loop:
 		return
