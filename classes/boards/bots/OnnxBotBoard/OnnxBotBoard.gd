@@ -29,8 +29,8 @@ var last_action_used_hold: bool = false
 var last_drop_distance: int = 0
 
 func _ready() -> void:
-	super._ready()
 	_load_onnx_model()
+	super._ready()
 
 func _initialize_engine() -> void:
 	super._initialize_engine()
@@ -41,7 +41,7 @@ func _initialize_engine() -> void:
 			engine.game_over.connect(_on_game_over)
 
 func start(countdown:int = 3) -> void:
-	super.start(countdown)
+	await super.start(countdown)
 	b2b_streak = 0
 	is_thinking = false
 	if engine != null:
